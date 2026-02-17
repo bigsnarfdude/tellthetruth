@@ -1,0 +1,110 @@
+{
+  "model": "google/gemma-2-2b-it",
+  "num_layers": 26,
+  "cosine_similarity": -0.0012041855272173815,
+  "angle_degrees": 89.93100523486524,
+  "truth_layer": 16,
+  "decep_layer": 26,
+  "truth_auroc": 0.8768143049528655,
+  "decep_auroc": 0.9807,
+  "same_layer_cosine": {
+    "16": -0.004321674584342162,
+    "26": -0.005002990848719075
+  },
+  "subspace_analysis": {
+    "1": {
+      "mean_angle_rad": 1.567296028137207,
+      "mean_angle_deg": 89.79944765987908,
+      "min_angle_deg": 89.79944765987908,
+      "max_angle_deg": 89.79944765987908,
+      "variance_explained_truth": 0.06467790901660919,
+      "variance_explained_decep": 0.3869451582431793
+    },
+    "2": {
+      "mean_angle_rad": 1.5399551391601562,
+      "mean_angle_deg": 88.23293011335832,
+      "min_angle_deg": 87.49463447540413,
+      "max_angle_deg": 88.97123258150168,
+      "variance_explained_truth": 0.12638232111930847,
+      "variance_explained_decep": 0.5441858172416687
+    },
+    "5": {
+      "mean_angle_rad": 1.5349148511886597,
+      "mean_angle_deg": 87.94414288506101,
+      "min_angle_deg": 85.37510383254411,
+      "max_angle_deg": 89.60899466506244,
+      "variance_explained_truth": 0.2208324670791626,
+      "variance_explained_decep": 0.7067526578903198
+    },
+    "10": {
+      "mean_angle_rad": 1.5110348463058472,
+      "mean_angle_deg": 86.57591939052405,
+      "min_angle_deg": 82.16978484751634,
+      "max_angle_deg": 89.73622059873227,
+      "variance_explained_truth": 0.29571533203125,
+      "variance_explained_decep": 0.7911849021911621
+    },
+    "20": {
+      "mean_angle_rad": 1.4848459959030151,
+      "mean_angle_deg": 85.0754087921423,
+      "min_angle_deg": 78.0189627756837,
+      "max_angle_deg": 89.9845526165756,
+      "variance_explained_truth": 0.38447055220603943,
+      "variance_explained_decep": 0.8438235521316528
+    },
+    "50": {
+      "mean_angle_rad": 1.4285473823547363,
+      "mean_angle_deg": 81.84973584338788,
+      "min_angle_deg": 69.75232335151473,
+      "max_angle_deg": 89.88361608102115,
+      "variance_explained_truth": 0.5238964557647705,
+      "variance_explained_decep": 0.903897762298584
+    }
+  },
+  "cross_capture": {
+    "decep_var_captured_by_truth_pca10": -0.7020800735695596,
+    "truth_var_captured_by_decep_pca10": -0.00979561981383803
+  },
+  "combined_probe": {
+    "auroc": 0.8679427353381726,
+    "accuracy": 0.8007590132827325,
+    "bootstrap": {
+      "mean": 0.8680234728373355,
+      "ci_lo": 0.838022740771562,
+      "ci_hi": 0.8979350969477594
+    },
+    "truth_only_auroc": 0.8166983523447402,
+    "decep_only_auroc": 0.7958290125590506,
+    "combined_weights": [
+      8.154861812184407,
+      4.594880701301112
+    ],
+    "combined_intercept": -7.251152830150798
+  },
+  "cross_task": {
+    "truth_probe_on_truth_task": 0.8768143049528655,
+    "decep_probe_on_decep_task": 0.9807,
+    "truth_probe_on_decep_task": 0.7413999999999998,
+    "decep_probe_on_truth_task": 0.5877225796797846
+  },
+  "score_distributions": {
+    "truth_data_truth_score": {
+      "mean": 0.5125715183003359,
+      "std": 0.3874341638477562
+    },
+    "truth_data_decep_score": {
+      "mean": 0.3712558887078959,
+      "std": 0.35177113329097937
+    },
+    "decep_data_truth_score": {
+      "mean": 0.7996102223971906,
+      "std": 0.1710877693535417
+    },
+    "decep_data_decep_score": {
+      "mean": 0.5089023431614591,
+      "std": 0.4769787295476214
+    }
+  },
+  "elapsed_seconds": 193.80573916435242,
+  "timestamp": "2026-02-17T18:45:25"
+}
