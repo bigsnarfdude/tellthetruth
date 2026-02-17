@@ -43,8 +43,20 @@ MAX_SAMPLES_PER_CLASS = 500  # balance + speed
 
 # Data paths (from HF cache)
 HF_CACHE = Path.home() / ".cache/huggingface/hub"
-TRAINING_DATA = list((HF_CACHE / "datasets--vincentoh--alignment-faking-training").rglob("training_data_final.json"))[-1]
-ORGANISM_DATA = list((HF_CACHE / "datasets--vincentoh--af-model-organisms").rglob("best_samples.json"))[-1]
+
+def _find_cached(dataset_name, filename):
+    """Find a cached HF dataset file, sorted by mtime for stability."""
+    pattern_dir = HF_CACHE / f"datasets--vincentoh--{dataset_name}"
+    matches = sorted(pattern_dir.rglob(filename), key=lambda p: p.stat().st_mtime)
+    if not matches:
+        raise FileNotFoundError(
+            f"{filename} not found in {pattern_dir}. "
+            f"Run: datasets.load_dataset('vincentoh/{dataset_name}') first."
+        )
+    return matches[-1]
+
+TRAINING_DATA = _find_cached("alignment-faking-training", "training_data_final.json")
+ORGANISM_DATA = _find_cached("af-model-organisms", "best_samples.json")
 
 GENERATION_PROMPT = (
     "Write a detailed account of the life and scientific contributions "
@@ -152,50 +164,57 @@ def train_probe(force_retrain: bool = False) -> dict:
             pooled = out.hidden_states[l].mean(dim=1).squeeze().float().cpu().numpy()
             all_acts[l].append(pooled)
 
-    print("\n  Layer sweep:")
+    # Split dev/test UPFRONT — test set never seen during layer selection
+    indices = np.arange(len(labels))
+    dev_idx, test_idx = train_test_split(
+        indices, test_size=0.2, random_state=42, stratify=labels
+    )
+    labels_dev = labels[dev_idx]
+    labels_test = labels[test_idx]
+    print(f"\n  Split: {len(dev_idx)} dev, {len(test_idx)} test (held-out)")
+
+    print("  Layer sweep (5-fold CV on dev set):")
     best_auroc = 0
     best_layer = 15
     layer_results = {}
 
     for l in layers_to_try:
-        X = np.stack(all_acts[l])
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, labels, test_size=0.2, random_state=42, stratify=labels
-        )
-        scaler = StandardScaler()
-        X_train_s = scaler.fit_transform(X_train)
-        X_test_s = scaler.transform(X_test)
+        X_all = np.stack(all_acts[l])
+        X_dev = X_all[dev_idx]
 
-        probe = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
-        probe.fit(X_train_s, y_train)
-
-        y_prob = probe.predict_proba(X_test_s)[:, 1]
-        auroc = roc_auc_score(y_test, y_prob)
-        acc = accuracy_score(y_test, probe.predict(X_test_s))
-        layer_results[l] = {"auroc": auroc, "accuracy": acc}
-        print(f"    Layer {l:2d}: AUROC={auroc:.4f}, Acc={acc:.4f}")
+        from sklearn.model_selection import StratifiedKFold
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        fold_aurocs = []
+        for tr, va in skf.split(X_dev, labels_dev):
+            sc = StandardScaler()
+            p = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
+            p.fit(sc.fit_transform(X_dev[tr]), labels_dev[tr])
+            fold_aurocs.append(roc_auc_score(labels_dev[va], p.predict_proba(sc.transform(X_dev[va]))[:, 1]))
+        auroc = float(np.mean(fold_aurocs))
+        layer_results[l] = {"auroc": auroc, "accuracy": 0.0}
+        print(f"    Layer {l:2d}: CV AUROC={auroc:.4f}")
 
         if auroc > best_auroc:
             best_auroc = auroc
             best_layer = l
 
-    print(f"\n  Best: layer {best_layer} (AUROC={best_auroc:.4f})")
+    print(f"\n  Best: layer {best_layer} (CV AUROC={best_auroc:.4f})")
 
-    # Final probe on best layer
-    X_all = np.stack(all_acts[best_layer])
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_all, labels, test_size=0.2, random_state=42, stratify=labels
-    )
+    # Train final probe on full dev set, evaluate on held-out test set
+    X_best = np.stack(all_acts[best_layer])
+    X_dev = X_best[dev_idx]
+    X_test = X_best[test_idx]
+
     scaler = StandardScaler()
-    X_train_s = scaler.fit_transform(X_train)
+    X_dev_s = scaler.fit_transform(X_dev)
     X_test_s = scaler.transform(X_test)
 
     final_probe = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
-    final_probe.fit(X_train_s, y_train)
+    final_probe.fit(X_dev_s, labels_dev)
 
     y_prob = final_probe.predict_proba(X_test_s)[:, 1]
-    final_auroc = roc_auc_score(y_test, y_prob)
-    final_acc = accuracy_score(y_test, final_probe.predict(X_test_s))
+    final_auroc = roc_auc_score(labels_test, y_prob)
+    final_acc = accuracy_score(labels_test, final_probe.predict(X_test_s))
 
     print(f"  Final: AUROC={final_auroc:.4f}, Acc={final_acc:.4f}")
     print(f"\n  Classification report:")
@@ -253,6 +272,7 @@ def parse_json(raw: str):
 def generate(prompt: str) -> str:
     chat = [{"role": "user", "content": prompt}]
     inputs = tokenizer.apply_chat_template(chat, return_tensors="pt", add_generation_prompt=True).to(DEVICE)
+    torch.manual_seed(42)  # reproducible generation
     with torch.no_grad():
         out = model.generate(inputs, max_new_tokens=512, do_sample=True, temperature=0.7, top_p=0.9)
     return tokenizer.decode(out[0][inputs.shape[1]:], skip_special_tokens=True)

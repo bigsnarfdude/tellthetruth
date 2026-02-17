@@ -127,13 +127,17 @@ def eval_probe(probe, scaler, X_test, y_test):
 def bootstrap_ci(y_true, y_scores, metric_fn, n=N_BOOTSTRAP, ci=0.95):
     """Bootstrap 95% CI for a metric."""
     scores = []
+    dropped = 0
     rng = np.random.RandomState(SEED)
     for _ in range(n):
         idx = rng.choice(len(y_true), len(y_true), replace=True)
         try:
             scores.append(metric_fn(y_true[idx], y_scores[idx]))
         except ValueError:
+            dropped += 1
             continue
+    if dropped > 0:
+        print(f"    [bootstrap] {dropped}/{n} samples dropped (single-class)")
     alpha = (1 - ci) / 2
     lo = np.percentile(scores, alpha * 100)
     hi = np.percentile(scores, (1 - alpha) * 100)
@@ -145,7 +149,10 @@ def calibration_bins(y_true, y_prob, n_bins=10):
     bins = np.linspace(0, 1, n_bins + 1)
     bin_data = []
     for i in range(n_bins):
-        mask = (y_prob >= bins[i]) & (y_prob < bins[i + 1])
+        if i == n_bins - 1:
+            mask = (y_prob >= bins[i]) & (y_prob <= bins[i + 1])  # inclusive upper for last bin
+        else:
+            mask = (y_prob >= bins[i]) & (y_prob < bins[i + 1])
         if mask.sum() == 0:
             continue
         bin_data.append({
@@ -210,13 +217,14 @@ def exp1_1_layer_sweep(acts, labels):
 # ---------------------------------------------------------------------------
 # Exp 1.2: Final probe on best layer with full metrics
 # ---------------------------------------------------------------------------
-def exp1_2_final_probe(acts, labels, layer_results):
-    """Train final probe on best layer, compute all metrics + bootstrap CI."""
+def exp1_2_final_probe(acts_dev, acts_test, labels_dev, labels_test, layer_results):
+    """Train final probe on best layer, compute all metrics + bootstrap CI.
+    Uses held-out test set that was NEVER seen during layer sweep."""
     print("\n" + "=" * 60)
     print("  Exp 1.2: Final Probe + Bootstrap CI")
     print("=" * 60)
 
-    # Find best pool/layer combo
+    # Find best pool/layer combo from CV on dev set only
     best_auroc = 0
     best_pool, best_layer, best_C = "mean", 15, 1.0
     for pool in layer_results:
@@ -229,10 +237,11 @@ def exp1_2_final_probe(acts, labels, layer_results):
 
     print(f"  Best: pool={best_pool}, layer={best_layer}, C={best_C}, CV AUROC={best_auroc:.4f}")
 
-    X = acts[best_pool][best_layer]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, labels, test_size=0.2, random_state=SEED, stratify=labels
-    )
+    # Train on full dev set, evaluate on held-out test set
+    X_train = acts_dev[best_pool][best_layer]
+    y_train = labels_dev
+    X_test = acts_test[best_pool][best_layer]
+    y_test = labels_test
 
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
@@ -381,8 +390,8 @@ def generate_report(layer_results, final, ablations, elapsed):
         "## Setup",
         "",
         f"- **Model:** {MODEL_ID} ({NUM_LAYERS} layers)",
-        f"- **Data:** TruthfulQA generation split (817 questions → 1634 paired samples)",
-        f"- **Protocol:** 5-fold stratified CV, C ∈ {{0.01, 0.1, 1.0, 10.0}}",
+        f"- **Data:** TruthfulQA generation split (817 questions → 1634 paired samples, 80/20 dev/test)",
+        f"- **Protocol:** Held-out test split; 5-fold stratified CV on dev set for layer/C selection",
         f"- **Bootstrap:** {N_BOOTSTRAP} resamples for 95% CI",
         "",
         "## 1.1 Full Layer Sweep",
@@ -470,7 +479,9 @@ def generate_report(layer_results, final, ablations, elapsed):
 
     lines.append(f"| Random labels | {rl['auroc_mean']:.4f} ± {rl['auroc_std']:.4f} | ~0.5 | {'YES' if abs(rl['auroc_mean'] - 0.5) < 0.1 else 'NO'} |")
     lines.append(f"| Shuffled activations | {sa['auroc_mean']:.4f} ± {sa['auroc_std']:.4f} | ~0.5 | {'YES' if abs(sa['auroc_mean'] - 0.5) < 0.1 else 'NO'} |")
-    lines.append(f"| BoW baseline | {bow['auroc_mean']:.4f} ± {bow['auroc_std']:.4f} | < probe | {'YES' if bow['auroc_mean'] < m['auroc'] else 'NO — vocabulary confound?'} |")
+    # Compare BoW to probe CV AUROC (same evaluation protocol), not test AUROC
+    best_cv_auroc = max(layer_results[bp][l]["cv_auroc"] for l in layer_results[bp])
+    lines.append(f"| BoW baseline | {bow['auroc_mean']:.4f} ± {bow['auroc_std']:.4f} | < probe CV | {'YES' if bow['auroc_mean'] < best_cv_auroc else 'NO — vocabulary confound?'} |")
 
     lines += [
         "",
@@ -486,15 +497,15 @@ def generate_report(layer_results, final, ablations, elapsed):
         "",
     ]
 
-    # Auto-interpret results
+    # Auto-interpret results — compare BoW to probe CV AUROC (same protocol)
     probe_auroc = m["auroc"]
     bow_auroc = bow["auroc_mean"]
     if probe_auroc > 0.75 and abs(rl["auroc_mean"] - 0.5) < 0.1:
         lines.append("The truthfulness probe shows genuine signal in the activation space.")
-        if bow_auroc > probe_auroc - 0.05:
+        if bow_auroc > best_cv_auroc - 0.05:
             lines.append("**Warning:** BoW baseline is close to probe AUROC — the signal may be partially vocabulary-based.")
         else:
-            lines.append(f"The probe ({probe_auroc:.3f}) substantially outperforms BoW ({bow_auroc:.3f}), confirming the signal is in the representation geometry, not surface vocabulary.")
+            lines.append(f"The probe (CV {best_cv_auroc:.3f}, test {probe_auroc:.3f}) substantially outperforms BoW ({bow_auroc:.3f}), confirming the signal is in the representation geometry, not surface vocabulary.")
     elif probe_auroc < 0.6:
         lines.append("The truthfulness probe shows weak signal. TruthfulQA may not provide a strong enough training signal for this model.")
     else:
@@ -518,21 +529,35 @@ def main():
     texts, labels = load_truthfulqa()
     print(f"  {len(texts)} samples ({labels.sum()} correct, {len(labels) - labels.sum()} incorrect)")
 
+    # Split dev/test UPFRONT to prevent data leakage
+    # Layer sweep (Exp 1.1) uses dev set only; final eval (Exp 1.2) uses test set
+    indices = np.arange(len(texts))
+    dev_idx, test_idx = train_test_split(
+        indices, test_size=0.2, random_state=SEED, stratify=labels
+    )
+    texts_dev = [texts[i] for i in dev_idx]
+    texts_test = [texts[i] for i in test_idx]
+    labels_dev = labels[dev_idx]
+    labels_test = labels[test_idx]
+    print(f"  Split: {len(texts_dev)} dev, {len(texts_test)} test (held-out)")
+
     # Extract activations
-    print("\nExtracting activations (all layers, all pooling)...")
-    acts = extract_all_layers(texts)
+    print("\nExtracting dev activations (all layers, all pooling)...")
+    acts_dev = extract_all_layers(texts_dev)
+    print("\nExtracting test activations (all layers, all pooling)...")
+    acts_test = extract_all_layers(texts_test)
 
-    # Exp 1.1: Layer sweep
-    layer_results = exp1_1_layer_sweep(acts, labels)
+    # Exp 1.1: Layer sweep on dev set only
+    layer_results = exp1_1_layer_sweep(acts_dev, labels_dev)
 
-    # Exp 1.2: Final probe
-    final = exp1_2_final_probe(acts, labels, layer_results)
+    # Exp 1.2: Final probe (train on dev, eval on held-out test)
+    final = exp1_2_final_probe(acts_dev, acts_test, labels_dev, labels_test, layer_results)
 
-    # Exp 1.3: Ablations
+    # Exp 1.3: Ablations (use dev set for CV ablations)
     ablations = exp1_3_ablations(
-        acts, labels,
+        acts_dev, labels_dev,
         final["best_pool"], final["best_layer"], final["best_C"],
-        texts,
+        texts_dev,
     )
 
     elapsed = time.time() - t0
@@ -544,6 +569,8 @@ def main():
         "model": MODEL_ID,
         "num_layers": NUM_LAYERS,
         "n_samples": len(texts),
+        "n_dev": len(texts_dev),
+        "n_test": len(texts_test),
         "layer_sweep": {
             pool: {str(l): v for l, v in layers.items()}
             for pool, layers in layer_results.items()

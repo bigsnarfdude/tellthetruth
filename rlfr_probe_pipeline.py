@@ -160,48 +160,59 @@ def phase1_train_probe(force_retrain: bool = False) -> dict:
 
     labels_arr = np.array(labels)
 
-    print("\n  Layer sweep:")
+    # Split dev/test UPFRONT — test set never seen during layer selection
+    indices = np.arange(len(labels_arr))
+    dev_idx, test_idx = train_test_split(
+        indices, test_size=0.2, random_state=42, stratify=labels_arr
+    )
+    labels_dev = labels_arr[dev_idx]
+    labels_test = labels_arr[test_idx]
+
+    print(f"\n  Split: {len(dev_idx)} dev, {len(test_idx)} test (held-out)")
+    print("  Layer sweep (5-fold CV on dev set):")
     layer_results = {}
     for l in layers_to_try:
-        X = np.stack(all_layer_acts[l])
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, labels_arr, test_size=0.2, random_state=42, stratify=labels_arr
-        )
-        scaler = StandardScaler()
-        X_train_s = scaler.fit_transform(X_train)
-        X_test_s = scaler.transform(X_test)
+        X_all = np.stack(all_layer_acts[l])
+        X_dev = X_all[dev_idx]
 
-        probe = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
-        probe.fit(X_train_s, y_train)
-
-        y_prob = probe.predict_proba(X_test_s)[:, 1]
-        auroc = roc_auc_score(y_test, y_prob)
-        acc = accuracy_score(y_test, probe.predict(X_test_s))
-        layer_results[l] = {"auroc": auroc, "accuracy": acc}
-        print(f"    Layer {l:2d}: AUROC={auroc:.4f}, Acc={acc:.4f}")
+        # 5-fold CV on dev set for layer selection
+        from sklearn.model_selection import StratifiedKFold
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+        fold_aurocs = []
+        for tr_idx, va_idx in skf.split(X_dev, labels_dev):
+            scaler = StandardScaler()
+            X_tr = scaler.fit_transform(X_dev[tr_idx])
+            X_va = scaler.transform(X_dev[va_idx])
+            probe = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
+            probe.fit(X_tr, labels_dev[tr_idx])
+            y_prob = probe.predict_proba(X_va)[:, 1]
+            fold_aurocs.append(roc_auc_score(labels_dev[va_idx], y_prob))
+        auroc = np.mean(fold_aurocs)
+        layer_results[l] = {"auroc": float(auroc), "accuracy": 0.0}
+        print(f"    Layer {l:2d}: CV AUROC={auroc:.4f}")
 
         if auroc > best_auroc:
             best_auroc = auroc
             best_layer = l
 
-    print(f"\n  Best layer: {best_layer} (AUROC={best_auroc:.4f})")
+    print(f"\n  Best layer: {best_layer} (CV AUROC={best_auroc:.4f})")
 
-    # Retrain final probe on best layer with all data
-    X_all = np.stack(all_layer_acts[best_layer])
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_all, labels_arr, test_size=0.2, random_state=42, stratify=labels_arr
-    )
+    # Train final probe on full dev set, evaluate on held-out test set
+    X_best = np.stack(all_layer_acts[best_layer])
+    X_dev = X_best[dev_idx]
+    X_test = X_best[test_idx]
+
     final_scaler = StandardScaler()
-    X_train_s = final_scaler.fit_transform(X_train)
+    X_dev_s = final_scaler.fit_transform(X_dev)
     X_test_s = final_scaler.transform(X_test)
 
     final_probe = LogisticRegression(C=1.0, max_iter=1000, random_state=42)
-    final_probe.fit(X_train_s, y_train)
+    final_probe.fit(X_dev_s, labels_dev)
 
     y_prob = final_probe.predict_proba(X_test_s)[:, 1]
-    final_auroc = roc_auc_score(y_test, y_prob)
-    final_acc = accuracy_score(y_test, final_probe.predict(X_test_s))
-    print(f"  Final probe: AUROC={final_auroc:.4f}, Acc={final_acc:.4f}")
+    final_auroc = roc_auc_score(labels_test, y_prob)
+    final_acc = accuracy_score(labels_test, final_probe.predict(X_test_s))
+    print(f"  Final probe (held-out test): AUROC={final_auroc:.4f}, Acc={final_acc:.4f}")
 
     result = {
         "probe": final_probe,
@@ -226,6 +237,7 @@ def generate_completion(prompt: str, max_new_tokens: int = 512) -> str:
     """Generate text with the model."""
     chat = [{"role": "user", "content": prompt}]
     inputs = tokenizer.apply_chat_template(chat, return_tensors="pt", add_generation_prompt=True).to(DEVICE)
+    torch.manual_seed(42)  # reproducible generation
     with torch.no_grad():
         out = model.generate(
             inputs,
