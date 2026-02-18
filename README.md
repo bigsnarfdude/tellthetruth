@@ -137,12 +137,11 @@ All experiments use **google/gemma-2-2b-it** (26 layers, ~5GB in bf16). Activati
 ## Citation
 
 ```bibtex
-@article{oh2026orthogonal,
+@article{bigsnarfdude2026orthogonal,
   title={Orthogonal Failure Modes: Truthfulness and Deception Are
          Mechanistically Distinct Signals in Language Model Activations},
-  author={Oh, Vincent},
-  year={2026},
-  note={BIRS, University of British Columbia}
+  author={bigsnarfdude},
+  year={2026}
 }
 ```
 
