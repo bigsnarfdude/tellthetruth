@@ -2,7 +2,7 @@
 
 > **TL;DR:** We tried to validate Goodfire's [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Feb 2026) claim that activation probes can reduce LLM hallucinations. **The probes don't generalize.** The truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier in disguise (BoW = 0.997). The headline "91.8% hallucination reduction" is misleading -- the probe flags 95.7% of all claims and Claude does all the real work deciding what's wrong. You could replace the probe with `flag_everything=True` and get roughly the same result. We then tested the autointerp diverse-training fix that worked for deception (0.355->0.991) -- **it doesn't work for truthfulness.** The distributions already overlap (1.02x magnitude, 75% feature overlap). Different root cause. What *is* real: truthfulness and deception are orthogonal signals in activation space (cos = -0.001), and the truthfulness signal is genuinely geometric within its training distribution.
 
-Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it. Six experiments, mostly negative results, some interesting mechanistic findings.
+Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it, plus a model scale test on Gemma-3-12B-IT. Seven experiments, mostly negative results, some interesting mechanistic findings.
 
 ## What Worked
 
@@ -53,7 +53,7 @@ pip install -r requirements.txt
 
 ### Run Experiments
 
-Experiments must run **in order** (1-6). Each writes results to `results/`.
+Experiments 1-6 must run **in order**. Exp 7 only requires Exp 4 results. Each writes results to `results/`.
 
 ```bash
 # Exp 1: Truthfulness probe (TruthfulQA, ~1h GPU)
@@ -76,6 +76,16 @@ python experiments/exp5_adversarial.py
 #   Tests if autointerp diverse-training fix works for truthfulness
 #   Reads results/exp4_results_sonnet.json from Exp 4
 python experiments/exp6_diverse_truthfulness.py
+
+# Exp 7: Gemma-3-12B-IT model scale test (~2h GPU)
+#   Tests if bigger model closes the OOD gap. Requires bitsandbytes.
+#   Reads results/exp4_results.json from Exp 4 (for OOD eval)
+python experiments/exp7_gemma3_9b.py
+
+# Exp 8: Proper Goodfire replication (~4-6h GPU + Claude CLI)
+#   Attention-based probes on model-generated data (paper methodology)
+#   Requires: Claude CLI, GPU. Independent of Exp 1-7.
+python experiments/exp8_proper_replication.py
 ```
 
 All random seeds are fixed (42). Results should reproduce on equivalent hardware.
@@ -95,14 +105,16 @@ tellthetruth/
 │   ├── exp3_orthogonality.py
 │   ├── exp4_pipeline.py
 │   ├── exp5_adversarial.py
-│   └── exp6_diverse_truthfulness.py  # NEGATIVE RESULT
+│   ├── exp6_diverse_truthfulness.py  # NEGATIVE RESULT
+│   ├── exp7_gemma3_9b.py             # Model scale test (int4)
+│   └── exp8_proper_replication.py    # Proper Goodfire replication
 ├── prototypes/                # Earlier exploration pipelines
 │   ├── rlfr_pipeline.py           # Web-search-based verification
 │   ├── rlfr_probe_pipeline.py     # First probe-based pipeline
 │   └── rlfr_organism_pipeline.py  # AF organism-enhanced probe
 ├── results/                   # Output from all experiments
-│   ├── exp{1-6}_results.json      # Raw metrics
-│   ├── exp{1-6}_results.md        # Human-readable reports
+│   ├── exp{1-7}_results.json      # Raw metrics
+│   ├── exp{1-7}_results.md        # Human-readable reports
 │   ├── exp6_diverse_data.json     # 120 Claude-generated diverse samples
 │   └── rlfr_*.md                  # Prototype pipeline results
 └── paper/
@@ -125,23 +137,34 @@ tellthetruth/
 
 **Exp 6 - Diverse-Training Fix (NEGATIVE RESULT):** Tested whether the autointerp diverse-training fix (0.355->0.991 for deception) works for truthfulness. It doesn't. Distribution diagnosis shows the distributions already overlap: 1.02x magnitude ratio, 75% feature overlap, 0.92 centroid cosine. This is the opposite of the deception case (10x, 6%, low). 120 Claude-generated diverse samples improved free-form AUROC by only 0.036 (0.538->0.574). The only meaningful jump (to 0.706) came from training on exp4 claims themselves -- which is circular. The truthfulness OOD gap has a fundamentally different root cause than deception.
 
+**Exp 7 - Gemma-3-9B-IT Model Scale Test:** Tests whether a 4.5x larger model (Gemma-3-9B-IT, int4 quantized) encodes truthfulness more abstractly, producing a probe that generalizes better from QA to free-form text. Full layer sweep across all layers, same ablations as Exp 1, plus direct OOD comparison using Exp 4 claims. The critical question: does the OOD gap (0.877 → 0.592 on 2B) shrink with a bigger model?
+
+**Exp 8 - Proper Goodfire Replication:** After reviewing the actual Features as Rewards paper (Appendix B), we discovered experiments 1-6 got the methodology fundamentally wrong: wrong probe architecture (linear vs attention-based), wrong training data (TruthfulQA vs model-generated), wrong pipeline (single-score vs two-stage localize+classify). Exp 8 implements the paper's actual approach: (1) generate completions from Gemma-2-2B-it, (2) extract and verify entities via Claude CLI, (3) train a Transformer localization probe (L=4, E=128, Nh=8) for per-token entity detection, (4) train an attention classification probe (E=1024, Nh=8, learned query per head) for per-entity hallucination detection, (5) evaluate at threshold ≥ 0.7 matching paper metrics. Includes ablation isolating architecture effect vs data effect. Results pending.
+
 ## What Would Fix This
 
 ~~The probes fail for the same reason our earlier lightbright SAE sweep failed (0.355 AUROC): **training distribution doesn't match deployment distribution.**~~
 
-**Update (Exp 6):** We tested the autointerp diverse-training fix. It doesn't work for truthfulness -- the distributions already overlap. The root cause is different. Untested alternatives:
+**Update (Exp 6):** We tested the autointerp diverse-training fix. It doesn't work for truthfulness -- the distributions already overlap. The root cause is different.
 
-1. **Non-linear probes** -- MLP or polynomial features (linear may be insufficient for free-form truthfulness)
-2. **Format-invariant training** -- mixed QA + assertions + paragraphs from the start (QA formatting helped +0.046)
-3. **Multi-layer aggregation** -- concatenate across layers (L16 alone may not suffice for free-form)
+**Update (Exp 7):** Testing whether a bigger model (Gemma-3-9B-IT int4) closes the OOD gap. Results pending.
+
+**Update (Exp 8):** We read the actual paper and realized we got the methodology wrong. Exp 8 is a proper replication with attention-based probes trained on model-generated data. This tests the three hypotheses simultaneously: (a) architecture matters (attention > linear), (b) data matters (model-generated > TruthfulQA), (c) model scale matters (2B may be too small). Results pending.
+
+Untested alternatives:
+
+1. ~~**Non-linear probes**~~ → Exp 8 tests attention-based probes (paper's architecture)
+2. ~~**Format-invariant training**~~ → Exp 8 trains on model's own generations (no format mismatch)
+3. ~~**Multi-layer aggregation**~~ → Exp 8 classification probe uses layers 11+16 concatenated
 4. **Model-generated training data** -- exp4 claims helped +0.132 from 94 samples vs +0.036 from 120 Claude-generated samples; something different about model-generated text
 
 ## Data Dependencies
 
 | Dataset | Source | Used In | Notes |
 |---------|--------|---------|-------|
-| TruthfulQA | [`truthfulqa/truthful_qa`](https://huggingface.co/datasets/truthfulqa/truthful_qa) | Exp 1, 3, 4, 5 | Public, auto-downloads |
-| Gemma-2-2B-it | [`google/gemma-2-2b-it`](https://huggingface.co/google/gemma-2-2b-it) | All | Requires HF agreement |
+| TruthfulQA | [`truthfulqa/truthful_qa`](https://huggingface.co/datasets/truthfulqa/truthful_qa) | Exp 1, 3, 4, 5, 7 | Public, auto-downloads |
+| Gemma-2-2B-it | [`google/gemma-2-2b-it`](https://huggingface.co/google/gemma-2-2b-it) | Exp 1-6 | Requires HF agreement |
+| Gemma-3-12B-IT | [`google/gemma-3-12b-it`](https://huggingface.co/google/gemma-3-12b-it) | Exp 7 | Requires HF agreement, loaded in int4 |
 
 Experiments 2 and 3 (deception probe, orthogonality) additionally require alignment faking datasets that are **not bundled with this repo**. These come from separate research on alignment faking detection and must be downloaded independently:
 
@@ -151,11 +174,16 @@ Experiments 2 and 3 (deception probe, orthogonality) additionally require alignm
 | AF model organisms | [`vincentoh/af-model-organisms`](https://huggingface.co/datasets/vincentoh/af-model-organisms) | Exp 2, 3 | Mistral-7B generated AF organisms |
 | gold_106 | included in `alignment-faking-training` | Exp 2 | **Eval only -- never train on this** |
 
-Experiments 1, 4, 5, and 6 work standalone with just TruthfulQA and Gemma.
+Experiments 1, 4, 5, 6, and 7 work standalone with just TruthfulQA and Gemma.
 
-## Model
+## Models
 
-All experiments use **google/gemma-2-2b-it** (26 layers, ~5GB in bf16). Activations are extracted with `output_hidden_states=True`.
+| Model | Used In | Size | Notes |
+|-------|---------|------|-------|
+| [`google/gemma-2-2b-it`](https://huggingface.co/google/gemma-2-2b-it) | Exp 1-6 | ~5GB bf16 | 26 layers, hidden_dim=2304 |
+| [`google/gemma-3-12b-it`](https://huggingface.co/google/gemma-3-12b-it) | Exp 7 | ~7GB int4 | 48 layers, hidden_dim=3840 |
+
+Activations are extracted with `output_hidden_states=True`. Exp 7 uses int4 quantization (bitsandbytes NF4) to fit on 16GB VRAM.
 
 ## Citation
 

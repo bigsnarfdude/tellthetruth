@@ -265,6 +265,88 @@ Distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centro
 
 ---
 
+## Experiment 8: Proper Goodfire Replication
+
+### Motivation
+
+Review of the actual Features as Rewards paper (Appendix B) revealed that experiments 1-6 got the methodology fundamentally wrong:
+
+| Aspect | Paper | Our Exp 1-6 |
+|--------|-------|-------------|
+| Probe architecture | Attention-based (Transformer + learned-query attention) | Linear logistic regression |
+| Training data | Model's own generations, verified by Gemini 2.5 Pro | TruthfulQA QA pairs |
+| Pipeline | Two-stage: localization (find entities) + classification (is it hallucinated?) | Single-score per claim |
+| Evaluation | Precision/recall at threshold ≥ 0.7 | AUROC only |
+
+### 8.1 Data Generation Pipeline
+
+- Generate 100 completions from Gemma-2-2B-it (50 prompts × 2 completions)
+- Fact-dense suffix appended to prompts (paper: Appendix A.1)
+- Sampling: temperature=1.0, top_p=0.95, top_k=64, max_tokens=512
+
+### 8.2 Entity Extraction & Verification
+
+- Extract entities via Claude CLI (paper: Gemini 2.5 Pro, temp=0.1)
+- Target: people, organizations, locations, dates, numbers, citations
+- Verify in batches of 10 via Claude CLI (paper: Gemini 2.5 Pro + web search)
+- Labels: SUPPORTED, NOT_SUPPORTED, INSUFFICIENT_INFO (paper: same taxonomy)
+- Paper stats: ~65 entities/completion, 65.5% supported, 22.9% not supported
+
+### 8.3 Activation Extraction
+
+- Per-token hidden states at layers 11 and 16 (paper: layers 20 and 30 of 48-layer model)
+- Layer mapping: L20/48 ≈ 0.42 → L11/26, L30/48 ≈ 0.63 → L16/26
+- Entity text mapped to token indices via tokenizer offset mapping
+
+### 8.4 Localization Probe (paper B.3.1)
+
+**Architecture:** 4-layer Transformer, E=128, Nh=8, max_len=256
+- Paper: gated SWA + RoPE θ=32 + GeGLU; ours: standard attention + learned positions
+- Per-token prediction: is this token part of an entity?
+- Input: layer 11 activations
+
+**Training:** AdamW, lr=1e-3, wd=0.1, 5 epochs, cosine LR with 10% warmup
+
+### 8.5 Classification Probe (paper B.3.2 / Algorithm 2)
+
+**Architecture:** Noncausal attention probe, E=1024, Nh=8
+- Paper: E=2048, Nh=16 (scaled proportionally for 2B model)
+- Single learned query per head (paper: Algorithm 2)
+- Multi-layer input: layers 11+16 concatenated along sequence dimension
+- Per-entity prediction: is this entity hallucinated (NOT_SUPPORTED)?
+
+**Training:** AdamW, lr=5e-2, wd=0.1, 8 epochs, cosine LR with 10% warmup
+
+### 8.6 Evaluation
+
+Paper metrics at threshold ≥ 0.7:
+- Classification AUROC (paper: 0.94)
+- Precision at τ=0.7 (paper: 0.85)
+- Recall at τ=0.7 (paper: 0.56)
+- Localization AUROC (paper: 0.88)
+- Bootstrap 95% CI (n=1000)
+
+### 8.7 Ablation: Architecture vs Data
+
+Isolate which factor matters most for the OOD gap (0.877 → 0.592):
+
+| Condition | Architecture | Data | Expected |
+|-----------|-------------|------|----------|
+| Exp 1 (baseline) | Linear | TruthfulQA | 0.592 OOD |
+| Ablation A | Linear | Model-generated | ? (isolates data effect) |
+| Ablation B | Attention | Model-generated | ? (full replication) |
+
+### 8.8 Success Criteria
+
+| Criterion | Threshold | Rationale |
+|-----------|-----------|-----------|
+| Classification AUROC | ≥ 0.75 | Meaningful improvement over 0.592 |
+| Localization AUROC | ≥ 0.70 | Entity detection works |
+| Attention > Linear (same data) | > 0 | Architecture matters |
+| Model-gen > TruthfulQA (linear) | > 0.592 | Data matters |
+
+---
+
 ## Infrastructure
 
 ### Hardware
@@ -293,6 +375,8 @@ Distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centro
 | 3 | Exp 4.3-4.4 (pipeline eval + baselines) | ~8h |
 | 4 | Exp 5 (adversarial robustness) | ~4h |
 | 5 | Exp 6 (diverse-training fix) | ~3min (187s actual) |
+| 6 | Exp 7 (Gemma-3-9B model scale) | ~2h |
+| 7 | Exp 8 (proper Goodfire replication) | ~4-6h (GPU + Claude CLI) |
 
 ---
 
@@ -309,6 +393,8 @@ Distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centro
 | Paraphrase stability std | ≤ 0.10 | **0.088** | Probe is robust to surface variation |
 | Diverse free-form AUROC (Exp 6) | ≥ 0.75 | 0.706 | Diverse training closes OOD gap |
 | TruthfulQA no regression (Exp 6) | ≥ 0.85 | **0.870** | Don't break in-distribution performance |
+| Exp 8 classification AUROC | ≥ 0.75 | — | Proper Goodfire replication |
+| Exp 8 attention > linear (same data) | > 0 | — | Architecture matters |
 
 ---
 
