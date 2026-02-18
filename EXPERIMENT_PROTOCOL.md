@@ -2,7 +2,7 @@
 
 ## Overview
 
-Rigorous validation protocol for probe-based hallucination and deception detection, replicating the core loop from *Features as Rewards* (Goodfire AI, Feb 2026). Three probe types are evaluated independently and in combination.
+Rigorous validation protocol for probe-based hallucination and deception detection, replicating the core loop from *Features as Rewards* (Goodfire AI, Feb 2026). Three probe types are evaluated independently and in combination. Includes a diverse-training fix experiment testing whether the autointerp OOD fix generalizes from deception to truthfulness.
 
 ## Probe Taxonomy
 
@@ -198,6 +198,73 @@ Protocol:
 
 ---
 
+## Experiment 6: Diverse-Training Fix for Truthfulness Probe
+
+### Hypothesis
+
+The truthfulness probe's OOD gap (0.877→0.592) mirrors the deception OOD gap (0.981→0.663 and autointerp 0.355). If the root cause is activation distribution mismatch, the same fix (diverse training data) should close it.
+
+### 6.1 Distribution Diagnosis
+
+Measure the activation distribution overlap between TruthfulQA and free-form claims:
+
+| Metric | What it measures |
+|--------|-----------------|
+| Activation magnitude (mean, std, range) | Are the distributions in different regimes? |
+| Top-100 feature overlap | Do the same dimensions activate? |
+| Centroid cosine similarity | Are the cluster centers aligned? |
+| Per-dimension variance ratio | Is variance distributed differently? |
+
+**Decision point:** If magnitude ratio > 2x and feature overlap < 50%, the autointerp fix should work. If distributions already overlap, the root cause is different.
+
+### 6.2 Diverse Data Generation
+
+Generate 5 batches of diverse truthfulness samples via Claude CLI:
+
+| Batch | Target | Description |
+|-------|--------|-------------|
+| assertions | 30 samples | Single-sentence factual assertions |
+| paragraphs | 20 samples | Claims embedded in short paragraphs |
+| technical | 30 samples | Technical/numerical claims |
+| biographical | 20 samples | Biographical and citation claims |
+| hedged | 20 samples | Claims with hedging/uncertainty language |
+
+Each batch: ~50% correct, ~50% incorrect. Cached to `results/exp6_diverse_data.json`.
+
+### 6.3 Progressive Training Sweep
+
+Add diverse data incrementally, measuring both in-dist and OOD performance:
+
+| Step | Data | Measurement |
+|------|------|-------------|
+| 0 | Baseline (TruthfulQA only) | TruthfulQA AUROC + free-form AUROC |
+| 0.5 | Baseline + QA-formatted eval | Format effect measurement |
+| 1-5 | +each diverse batch | Progressive improvement curve |
+| 6 | +exp4 claims (50/50 split) | Domain-matched upper bound |
+
+**Regression check:** TruthfulQA AUROC must stay ≥ 0.85 at each step.
+
+### 6.4 Pipeline Re-evaluation
+
+Re-run Exp 4 evaluation with the best probe from the sweep:
+- AUROC, accuracy, flag rate, precision, recall
+- Bootstrap 95% CI
+- Intervention potential (how many incorrect claims caught)
+
+### 6.5 Success Criteria
+
+| Criterion | Threshold | Rationale |
+|-----------|-----------|-----------|
+| Free-form AUROC | ≥ 0.75 | Meaningful improvement over 0.592 |
+| TruthfulQA AUROC (no regression) | ≥ 0.85 | Don't break in-distribution performance |
+| Pipeline reduction | ≥ 91.8% | Match or beat Exp 4 |
+
+### Result (Feb 18): NEGATIVE
+
+Distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centroid cosine). Diverse training improved free-form AUROC by only 0.036 (0.538→0.574). The autointerp fix does not generalize from deception to truthfulness. Different root cause — possibly format dependence, non-linear structure, or distributed signal.
+
+---
+
 ## Infrastructure
 
 ### Hardware
@@ -225,20 +292,23 @@ Protocol:
 | 2 | Exp 3 (orthogonality) + Exp 4.1-4.2 (generation + labeling) | ~6h + manual |
 | 3 | Exp 4.3-4.4 (pipeline eval + baselines) | ~8h |
 | 4 | Exp 5 (adversarial robustness) | ~4h |
+| 5 | Exp 6 (diverse-training fix) | ~3min (187s actual) |
 
 ---
 
 ## Success Criteria
 
-| Criterion | Threshold | Rationale |
-|-----------|-----------|-----------|
-| Truthfulness probe AUROC (OOD) | ≥ 0.75 | Better than random, useful signal |
-| Deception probe AUROC (gold_106) | ≥ 0.90 | Matches prior work |
-| Cross-model transfer | ≥ 0.85 | Universal deception signature |
-| Orthogonality cos(w_t, w_d) | ≤ 0.15 | Confirms independent signals |
-| Pipeline hallucination reduction | ≥ 30% | Meaningful without RL |
-| Fresh probe recovery after adversarial SFT | ≥ 0.90 | Signal is mechanistically load-bearing |
-| Paraphrase stability std | ≤ 0.10 | Probe is robust to surface variation |
+| Criterion | Threshold | Result | Rationale |
+|-----------|-----------|--------|-----------|
+| Truthfulness probe AUROC (OOD) | ≥ 0.75 | **0.877** | Better than random, useful signal |
+| Deception probe AUROC (gold_106) | ≥ 0.90 | 0.663 | Matches prior work |
+| Cross-model transfer | ≥ 0.85 | — | Universal deception signature |
+| Orthogonality cos(w_t, w_d) | ≤ 0.15 | **-0.0012** | Confirms independent signals |
+| Pipeline hallucination reduction | ≥ 30% | 91.8%* | Meaningful without RL |
+| Fresh probe recovery after adversarial SFT | ≥ 0.90 | 0.696 | Signal is mechanistically load-bearing |
+| Paraphrase stability std | ≤ 0.10 | **0.088** | Probe is robust to surface variation |
+| Diverse free-form AUROC (Exp 6) | ≥ 0.75 | 0.706 | Diverse training closes OOD gap |
+| TruthfulQA no regression (Exp 6) | ≥ 0.85 | **0.870** | Don't break in-distribution performance |
 
 ---
 

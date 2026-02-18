@@ -1,6 +1,6 @@
 # Tell The Truth: Results Summary
 
-*Completed: 2026-02-17*
+*Completed: 2026-02-18*
 *Model: google/gemma-2-2b-it (26 layers) | Hardware: RTX 4070 Ti SUPER on nigel.birs.ca*
 *Replicating: Goodfire AI "Features as Rewards" (Feb 2026)*
 
@@ -8,11 +8,11 @@
 
 ## One-Line Summary
 
-The probes don't generalize. Truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier (BoW = 0.997). The "91.8% hallucination reduction" is Claude doing all the work — the probe flags 95.7% of everything and contributes nothing beyond `flag_all=True`. What *is* real: truthfulness and deception are orthogonal signals in activation space, and the truthfulness signal is genuinely geometric within its training distribution.
+The probes don't generalize. Truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier (BoW = 0.997). The "91.8% hallucination reduction" is Claude doing all the work — the probe flags 95.7% of everything and contributes nothing beyond `flag_all=True`. The autointerp diverse-training fix that worked for deception (0.355→0.991) does NOT work for truthfulness — distributions already overlap, different root cause. What *is* real: truthfulness and deception are orthogonal signals in activation space, and the truthfulness signal is genuinely geometric within its training distribution.
 
 ---
 
-## Protocol Criteria — Honest Scorecard (3 of 7 meaningfully pass)
+## Protocol Criteria — Honest Scorecard (4 of 9 meaningfully pass)
 
 | Criterion | Threshold | Result | Pass? | Notes |
 |-----------|-----------|--------|-------|-------|
@@ -23,6 +23,8 @@ The probes don't generalize. Truthfulness probe scores 0.877 AUROC on TruthfulQA
 | Pipeline hallucination reduction | ≥ 30% | 91.8% | No* | Claude does the work, probe flags everything |
 | Fresh probe recovery after adv. SFT | ≥ 0.90 | 0.696 | No | Signal partially erasable |
 | Paraphrase stability std | ≤ 0.10 | **0.088** | **Yes** | Real finding |
+| Diverse free-form AUROC (Exp 6) | ≥ 0.75 | 0.706 | No | Best only with data leak; diverse-only = 0.574 |
+| TruthfulQA no regression (Exp 6) | ≥ 0.85 | **0.870** | **Yes** | Diverse training doesn't hurt in-dist |
 
 \* Technically passes the number but fails the intent of the test.
 
@@ -182,6 +184,87 @@ claims vary widely (max-diff up to 0.635). Not fully wording-invariant at the cl
 
 ---
 
+## Experiment 6: Diverse-Training Fix for Truthfulness Probe (NEGATIVE RESULT)
+
+**Hypothesis:** The 0.877→0.592 truthfulness OOD gap mirrors the deception gap. Same root cause (activation distribution mismatch), same fix (diverse training data, per autointerp 0.355→0.991).
+
+### 6.1 Distribution Diagnosis
+
+| Metric | TruthfulQA | Free-form | Ratio |
+|--------|-----------|-----------|-------|
+| Activation magnitude (mean) | 254.2 | 249.6 | **1.02x** |
+| Activation magnitude (std) | 25.0 | 24.7 | — |
+
+| Metric | Truthfulness (Exp 6) | Deception (autointerp) |
+|--------|---------------------|----------------------|
+| Magnitude ratio | **1.02x** | 10x |
+| Feature overlap (top-100) | **75%** | ~6% |
+| Centroid cosine similarity | **0.9165** | low |
+| Median variance ratio | 1.15x | — |
+
+**The distributions are nearly identical.** This is the opposite of the deception case, where there was a 10x magnitude gap and only 6% feature overlap. The truthfulness probe's OOD problem is NOT distribution mismatch.
+
+### 6.2 Diverse Data Generation
+
+5 batches generated via Claude CLI on nigel:
+
+| Batch | Samples | Correct | Incorrect |
+|-------|---------|---------|-----------|
+| assertions | 30 | 24 | 6 |
+| paragraphs | 20 | 11 | 9 |
+| technical | 30 | 15 | 15 |
+| biographical | 20 | 10 | 10 |
+| hedged | 20 | 11 | 9 |
+| **Total** | **120** | **71** | **49** |
+
+### 6.3 Progressive Training Sweep
+
+| Step | Training Data | N Train | TruthfulQA AUROC | Free-form AUROC |
+|------|--------------|---------|-----------------|----------------|
+| 0 | Baseline (TQA only) | 1,307 | 0.877 | 0.538 |
+| 0.5 | QA-formatted eval | 1,307 | 0.877 | 0.584 |
+| 1 | +assertions | 1,337 | 0.876 | 0.528 |
+| 2 | +paragraphs | 1,357 | 0.876 | 0.542 |
+| 3 | +technical | 1,387 | 0.876 | 0.562 |
+| 4 | +biographical | 1,407 | 0.875 | 0.573 |
+| 5 | +hedged | 1,427 | 0.876 | 0.574 |
+| 6 | +exp4 claims (50/50) | 1,521 | 0.870 | **0.706** |
+
+**Key observations:**
+- Claude-generated diverse data barely helps: 0.538→0.574 (+0.036) across 120 samples
+- QA formatting the eval data helps more: 0.538→0.584 (+0.046) — some of the gap is format
+- The only big jump comes from training on exp4 claims themselves: 0.574→0.706 (+0.132), but this is circular (training on the test distribution)
+- TruthfulQA AUROC held steady throughout (0.877→0.870), no regression
+
+### 6.4 Pipeline Re-evaluation (with diverse probe)
+
+| Metric | Original (Exp 4) | Diverse Probe | Change |
+|--------|-----------------|---------------|--------|
+| AUROC | 0.592 | 0.574 | -0.018 |
+| Flag rate | 95.7% | 16.9% | — |
+| Precision (hallu) | ~0 | 0.531 | improved |
+| Recall (hallu) | ~1.0 | 0.193 | worse |
+
+Bootstrap 95% CI: [0.489, 0.654]. Potential hallucination reduction: 19.3%.
+
+**The diverse probe is not better for pipeline use.** It flags less (16.9% vs 95.7%) but catches fewer real errors.
+
+### Why the Fix Doesn't Transfer
+
+| Property | Deception (autointerp) | Truthfulness (Exp 6) |
+|----------|----------------------|---------------------|
+| Magnitude ratio | 10x | 1.02x |
+| Feature overlap | ~6% | 75% |
+| Diverse training improvement | +179% (0.355→0.991) | -3% (0.592→0.574) |
+| Root cause | Distribution mismatch | **Not distribution mismatch** |
+
+Three hypotheses for the truthfulness OOD gap:
+1. **Format mismatch** — TruthfulQA is Q&A format, free-form is paragraphs (QA formatting helped +0.046)
+2. **Non-linear signal** — truthfulness may not be a single linear feature in free-form context
+3. **TruthfulQA quirks** — probe learned common misconception patterns, not general truthfulness
+
+---
+
 ## What Failed and Why
 
 1. **Truthfulness probe doesn't generalize.** 0.877 on TruthfulQA QA pairs, 0.592 on generated paragraphs. The probe memorized the QA format, not the concept of truthfulness. Same root cause as lightbright (0.355): training distribution doesn't match deployment distribution.
@@ -191,6 +274,8 @@ claims vary widely (max-diff up to 0.635). Not fully wording-invariant at the cl
 3. **91.8% hallucination reduction is Claude, not the probe.** Probe flags 95.7% of claims (everything). Claude fact-checks them. The probe adds nothing. Replace it with `flag_all=True` and you get the same result.
 
 4. **Adversarial recovery is weak.** Fresh probe recovers to only 0.696 (target was 0.90). The truthfulness signal is more fragile than the deception signal under adversarial SFT.
+
+5. **Diverse-training fix doesn't work for truthfulness.** The autointerp pattern (0.355→0.991 for deception) does not transfer. Distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centroid cosine). Diverse training improved free-form AUROC by only 0.036 (0.538→0.574). The truthfulness OOD gap has a fundamentally different root cause than the deception OOD gap.
 
 ## What's Real
 
@@ -202,17 +287,27 @@ claims vary widely (max-diff up to 0.635). Not fully wording-invariant at the cl
 
 ## What Would Fix This
 
-The probes fail for the same reason lightbright failed (0.355 AUROC): **training distribution doesn't match deployment distribution.** The fix is known from autointerp (0.355 → 0.991): train on diverse data covering both activation magnitude regimes. We haven't done that here yet.
+~~The probes fail for the same reason lightbright failed (0.355 AUROC): **training distribution doesn't match deployment distribution.** The fix is known from autointerp (0.355 → 0.991): train on diverse data covering both activation magnitude regimes.~~
+
+**Update (Exp 6):** We tested this. It doesn't work for truthfulness. The distributions already overlap (1.02x magnitude, 75% feature overlap). The truthfulness OOD gap has a different root cause than deception. Possible fixes that remain untested:
+
+1. **Non-linear probes** — MLP or polynomial features to capture non-linear truthfulness structure
+2. **Format-invariant training** — mixed QA + assertions + paragraphs from the start
+3. **Multi-layer aggregation** — concatenate features across layers (L16 alone may be insufficient for free-form)
+4. **Model-generated training data** — exp4 claims helped more than Claude-generated diverse data (+0.132 vs +0.036), suggesting model-generated text has different properties
 
 ---
 
 ## Open Questions
 
-- Can domain-matched training (generated text, not QA pairs) fix the truthfulness probe OOD gap?
-- Does the autointerp fix (diverse training data) apply here? (0.355 → 0.991 for deception)
+- ~~Can domain-matched training (generated text, not QA pairs) fix the truthfulness probe OOD gap?~~ **Partially answered (Exp 6):** Training on exp4 claims raises AUROC to 0.706, but this is circular. Diverse Claude-generated text doesn't help.
+- ~~Does the autointerp fix (diverse training data) apply here?~~ **No (Exp 6).** Distributions already overlap. Different root cause.
 - Does adversarial recovery improve with lower lr or fewer steps?
 - Does the combined probe (Exp 3) improve pipeline precision?
 - Cross-model transfer: do these signals generalize across model families?
+- **NEW:** Is truthfulness non-linear? Distributions overlap (1.02x, 75%, 0.92) yet the linear probe fails OOD. Would MLP probes or polynomial features help?
+- **NEW:** How much of the OOD gap is format vs signal? QA formatting helped +0.046. Would format-invariant training close it?
+- **NEW:** Why does model-generated data help more than Claude-generated data? (+0.132 from 94 exp4 claims vs +0.036 from 120 diverse samples)
 
 ---
 
@@ -225,7 +320,11 @@ The probes fail for the same reason lightbright failed (0.355 AUROC): **training
 | `experiments/exp3_orthogonality.py` | Cosine similarity, PCA subspaces, combined probe |
 | `experiments/exp4_pipeline.py` | Generation → extraction → scoring → intervention |
 | `experiments/exp5_adversarial.py` | Adversarial SFT evasion + paraphrase attack |
+| `experiments/exp6_diverse_truthfulness.py` | Diverse-training fix attempt (negative result) |
 | `results/exp4_results_sonnet.{json,md}` | Exp 4 canonical results (sonnet-4-6 judge) |
 | `results/exp4_results.{json,md}` | Exp 4 haiku judge (reference comparison) |
 | `results/exp5_results.{json,md}` | Adversarial robustness results |
+| `results/exp6_results.{json,md}` | Exp 6 diverse-training results |
+| `results/exp6_diverse_data.json` | 120 Claude-generated diverse samples (5 types) |
+| `results/exp6_run.log` | Full experiment log (187s runtime) |
 | `EXPERIMENT_PROTOCOL.md` | Full protocol with success criteria |
