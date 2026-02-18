@@ -1,8 +1,35 @@
 # Tell The Truth
 
-> **TL;DR:** Goodfire's [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Feb 2026) showed that activation probes can reduce LLM hallucinations by 58% with RL. We independently validate this on Gemma-2-2B-it with a fully open pipeline -- and find you can hit **91.8% reduction without RL at all**, just a linear probe flagging suspicious claims and an LLM correcting them. The technique is simple, reproducible, and works with a single consumer GPU. You can do this too.
+> **TL;DR:** We tried to validate Goodfire's [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Feb 2026) claim that activation probes can reduce LLM hallucinations. **The probes don't generalize.** The truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier in disguise (BoW = 0.997). The headline "91.8% hallucination reduction" is misleading -- the probe flags 95.7% of all claims and Claude does all the real work deciding what's wrong. You could replace the probe with `flag_everything=True` and get roughly the same result. What *is* real: truthfulness and deception are orthogonal signals in activation space (cos = -0.001), and the truthfulness signal is genuinely geometric within its training distribution.
 
-Independent replication and extension of Goodfire AI's probe-based hallucination detection. Five experiments validating truthfulness probes, deception probes, their orthogonality, end-to-end pipeline performance, and adversarial robustness.
+Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it. Five experiments, mostly negative results, some interesting mechanistic findings.
+
+## What Worked
+
+- **Truthfulness is a real geometric signal** in layer 16, last-token activations. BoW baseline at 0.311 vs probe at 0.877 -- this is not vocabulary. The signal exists in-distribution.
+- **Truthfulness and deception are orthogonal** (cos = -0.001, angle = 89.9 degrees). Independent confirmation of lambda_results. These are mechanistically distinct failure modes.
+- **Paraphrase robustness** holds on average (std = 0.088). The probe detects content, not specific wording.
+
+## What Failed
+
+- **Truthfulness probe doesn't generalize.** 0.877 on TruthfulQA QA pairs, 0.592 on generated paragraphs. The probe memorized the QA format, not the concept of truthfulness. Classic train/test distribution mismatch.
+- **Deception probe is a vocabulary classifier.** BoW = 0.997 matches the probe. It learned scratchpad formatting tokens, not deceptive intent. OOD on gold_106: 0.663.
+- **91.8% hallucination reduction is Claude, not the probe.** The probe flags 95.7% of claims (essentially everything). Claude then fact-checks each one. The probe contributes nothing beyond `flag_all=True`. The pipeline works because Claude is good at fact-checking, not because the probe is good at detection.
+- **Adversarial recovery is weak.** Fresh probe recovers to 0.696, well below the 0.90 target. The truthfulness signal is more fragile than the deception signal under adversarial pressure.
+
+## Honest Scorecard (3 of 7 criteria meaningfully pass)
+
+| Criterion | Target | Result | Pass | Notes |
+|-----------|--------|--------|------|-------|
+| Truthfulness probe AUROC (in-dist) | >= 0.75 | **0.877** | Yes | Real signal, but overfit to TruthfulQA format |
+| Deception probe AUROC (in-dist) | >= 0.90 | 0.981 | No* | BoW = 0.997, it's vocabulary not activations |
+| Deception probe AUROC (gold_106 OOD) | >= 0.90 | 0.663 | No | Confirms the vocabulary confound |
+| Orthogonality cos(w_t, w_d) | <= 0.15 | **-0.0012** | Yes | Real finding |
+| Pipeline hallucination reduction | >= 30% | 91.8% | No* | Claude does the work, probe flags everything |
+| Fresh probe recovery after adversarial SFT | >= 0.90 | 0.696 | No | Signal partially erasable |
+| Paraphrase stability std | <= 0.10 | **0.088** | Yes | Real finding |
+
+\* Technically passes the number but fails the intent of the test.
 
 ## Quick Start
 
@@ -74,44 +101,21 @@ tellthetruth/
     └── goodness.pdf           # Reference paper
 ```
 
-## Results
+## Experiment Details
 
-### Scorecard (5 of 7 criteria pass)
+**Exp 1 - Truthfulness Probe:** Layer 16, last-token pooling. AUROC 0.877 on held-out TruthfulQA. BoW at 0.311 confirms geometric signal. But this doesn't transfer to free-form text (Exp 4).
 
-| Criterion | Target | Result | Pass |
-|-----------|--------|--------|------|
-| Truthfulness probe AUROC (in-dist) | >= 0.75 | **0.877** | Yes |
-| Deception probe AUROC (in-dist) | >= 0.90 | **0.981** | Yes |
-| Deception probe AUROC (gold_106 OOD) | >= 0.90 | 0.663 | No |
-| Orthogonality cos(w_t, w_d) | <= 0.15 | **-0.0012** | Yes |
-| Pipeline hallucination reduction | >= 30% | **91.8%** | Yes |
-| Fresh probe recovery after adversarial SFT | >= 0.90 | 0.696 | No |
-| Paraphrase stability std | <= 0.10 | **0.088** | Yes |
+**Exp 2 - Deception Probe:** Layer 26. AUROC 0.981 in-distribution, 0.663 on gold_106. BoW at 0.997 -- the probe learned vocabulary, not intent. The scratchpad format is a dead giveaway any n-gram classifier can exploit.
 
-### Experiment Summary
+**Exp 3 - Orthogonality:** cos(w_truth, w_decep) = -0.0012. The two probes detect genuinely different things. Combined 2D probe AUROC = 0.868 on mixed data, beating either alone. This is the most interesting finding in the repo.
 
-**Exp 1 - Truthfulness Probe:** Layer 16, last-token pooling. AUROC 0.877 on held-out TruthfulQA. Bag-of-words baseline at 0.311 confirms the signal is geometric, not vocabulary.
+**Exp 4 - End-to-End Pipeline:** 253 verifiable claims from hard factual generation. Probe AUROC = 0.592 (near random). Probe flags 95.7% of claims. Claude corrects them for a nominal 91.8% reduction. The probe is not contributing -- Claude is doing all the discrimination.
 
-**Exp 2 - Deception Probe:** Layer 26. AUROC 0.981 in-distribution but only 0.663 on gold_106 (OOD). BoW baseline at 0.997 reveals a vocabulary confound from scratchpad formatting.
+**Exp 5 - Adversarial Robustness:** LoRA adversarial SFT drops probe from 0.876 to 0.494. Fresh probe recovers to only 0.696. Paraphrase stability is OK (std = 0.088).
 
-**Exp 3 - Orthogonality:** cos(w_truth, w_decep) = -0.0012, angle = 89.9 degrees. Truthfulness and deception occupy independent subspaces. Combined 2D probe AUROC = 0.868, beating either alone.
+## What Would Fix This
 
-**Exp 4 - End-to-End Pipeline:** On 253 verifiable claims from hard factual generation, the probe barely beats random (AUROC 0.592 -- domain shift from TruthfulQA QA pairs). But probe + Claude intervention achieves 91.8% hallucination reduction by over-flagging and letting Claude correct.
-
-**Exp 5 - Adversarial Robustness:** Adversarial LoRA SFT drops probe AUROC from 0.876 to 0.494. Fresh probe recovers to 0.696 (below 0.90 target). Paraphrase stability passes (mean std = 0.088).
-
-### Key Findings
-
-1. **Truthfulness is a real geometric signal** in layer 16 last-token activations (not vocabulary, not overfitting)
-2. **Deception probe has a vocabulary confound** -- BoW matches probe AUROC, gold_106 OOD gap is severe
-3. **The two signals are mechanistically orthogonal** (cos = -0.0012), confirming lambda_results independently
-4. **Domain shift kills the probe on free-form generation** (0.877 in-dist -> 0.592 OOD)
-5. **Probe + LLM intervention beats RL without RL** (91.8% vs 58%) -- but the probe contributes coverage, not precision
-
-### What Failed and Why
-
-- **Deception OOD (0.663):** Training data uses distinctive scratchpad vocabulary. Fix: diverse training data per autointerp approach (0.355 -> 0.991 in prior work)
-- **Adversarial recovery (0.696):** 500 steps at lr=2e-5 may be too destructive for truthfulness signal. The deception signal is more robust per obfuscation-probe-robustness
+The probes fail for the same reason our earlier lightbright SAE sweep failed (0.355 AUROC): **training distribution doesn't match deployment distribution.** The fix is known from autointerp (0.355 -> 0.991): train on diverse data covering both activation magnitude regimes. We haven't done that here for the truthfulness probe yet.
 
 ## Data Dependencies
 
