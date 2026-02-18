@@ -22,30 +22,28 @@
 \title{\textbf{Orthogonal Failure Modes: Truthfulness and Deception\\
 Are Mechanistically Distinct Signals in Language Model Activations}}
 
-\author[1]{Vincent Oh}
-\affil[1]{BIRS, University of British Columbia}
+\author[1]{bigsnarfdude}
+\affil[1]{}
 \date{February 2026}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-We investigate whether factual hallucination and intentional deception are distinct, detectable
-signals in language model activation space, and whether linear probes trained on each can be
-combined into a practical hallucination-reduction pipeline. Using Gemma-2-2B-it as a testbed,
-we train two linear probes: a \emph{truthfulness probe} on TruthfulQA and a \emph{deception probe}
-on alignment-faking (AF) scratchpad reasoning. We find that the probes are near-perfectly
-orthogonal ($\cos(\mathbf{w}_t, \mathbf{w}_d) = -0.0012$, $\theta = 89.9°$), replicating the
-lambda\_results finding of 99.6\% orthogonal subspaces in an independent setup. In an end-to-end
-pipeline generating hard factual paragraphs, the truthfulness probe achieves only 0.592 AUROC
-on free-form text (domain shift from QA pairs), yet the combined probe-plus-LLM-intervention
-pipeline reduces hallucinations by \textbf{91.8\%}---surpassing the Goodfire
-\emph{Features as Rewards} RL-trained baseline of 58\%---by using the probe as a high-recall
-flag and delegating correction to Claude-sonnet-4-6. However, the deception probe is partially
-vocabulary-confounded (bag-of-words AUROC 0.997), fails OOD generalization (0.663 on gold\_106),
-and is susceptible to adversarial fine-tuning with incomplete fresh-probe recovery (0.696, below
-the 0.90 criterion). We characterize these failure modes and discuss implications for probe-based
-reward signals in reinforcement learning from features.
+We attempt to validate Goodfire AI's claim that activation probes can reduce LLM hallucinations,
+and find that the probes do not generalize. Using Gemma-2-2B-it, we train a \emph{truthfulness probe}
+on TruthfulQA (0.877 AUROC) and a \emph{deception probe} on alignment-faking scratchpad reasoning
+(0.981 AUROC). The probes are near-perfectly orthogonal
+($\cos(\mathbf{w}_t, \mathbf{w}_d) = -0.0012$, $\theta = 89.9°$), replicating the lambda\_results
+finding of 99.6\% orthogonal subspaces---this is the most robust finding in our study. However,
+the truthfulness probe drops to 0.592 AUROC on free-form generation (near random), having
+memorized TruthfulQA's QA format rather than the concept of truthfulness. The deception probe
+is a vocabulary classifier in disguise (bag-of-words baseline achieves 0.997 AUROC) and fails
+OOD (0.663 on gold\_106). The headline result---91.8\% hallucination reduction---is misleading:
+the probe flags 95.7\% of all claims indiscriminately, and Claude-sonnet-4-6 does all the real
+work deciding what is actually wrong. Replacing the probe with \texttt{flag\_everything=True}
+would yield roughly the same outcome. We report 3 of 7 protocol criteria as meaningfully
+passing and characterize why the remaining 4 fail their intent despite some passing their numbers.
 \end{abstract}
 
 \section{Introduction}
@@ -65,8 +63,10 @@ reduction. This raises several questions we address in this work:
 \begin{enumerate}
     \item Are truthfulness and deception geometrically distinct in activation space, or do they
           share the same underlying representation?
-    \item Can linear probes for each be trained reliably, and how do they generalize?
-    \item Do probe-based pipelines reduce hallucinations in practice, and where do they fail?
+    \item Can linear probes for each be trained reliably, and do they generalize beyond their
+          training distribution?
+    \item Does a probe-based pipeline genuinely reduce hallucinations, or does the LLM corrector
+          do all the work?
     \item Are these probes robust to adversarial fine-tuning and surface rephrasing?
 \end{enumerate}
 
@@ -348,11 +348,11 @@ Goodfire RLFR (with RL training) & 58\% \\
 \end{tabular}
 \end{table}
 
-Despite the probe's weak discrimination, the pipeline achieves 91.8\% hallucination
-reduction---surpassing the Goodfire RL baseline by 33.8 percentage points. The mechanism
-is simple: the probe's high recall (near-total flagging) ensures few incorrect claims
-escape; Claude-sonnet-4-6's intervention then correctly distinguishes true from false
-positives with high accuracy. The probe contributes coverage, not precision.
+The pipeline nominally achieves 91.8\% hallucination reduction, but this number is
+misleading. The mechanism is trivial: the probe flags nearly everything (95.7\%), and
+Claude-sonnet-4-6 then does the actual work of distinguishing correct from incorrect
+claims. The probe contributes nothing beyond \texttt{flag\_all=True}---Claude's
+self-check alone achieves 0.986 AUROC on these same claims.
 
 \paragraph{Judge sensitivity.}
 Using Claude-haiku-4-5 as judge instead of Claude-sonnet-4-6 produced 87.5\% hallucination
@@ -427,33 +427,31 @@ than vocabulary, and fixing it by diversifying training data across both regimes
 A domain-matched truthfulness probe---trained on probe-like generated text rather than
 TruthfulQA---would likely show substantially higher AUROC in the Experiment 4 setting.
 
-\subsection{High-Recall Probes as Pipeline Components}
+\subsection{The 91.8\% Reduction Is Claude, Not the Probe}
 
-Our 91.8\% hallucination reduction demonstrates a counterintuitive finding: a low-precision
-probe can be highly effective in a pipeline when paired with a capable corrector. By flagging
-95.7\% of all claims and passing them to an LLM, the probe trades precision for recall,
-and the LLM compensates for the false positive rate. This exceeds the Goodfire RL
-baseline (58\%) without any RL training.
+The headline 91.8\% hallucination reduction is misleading. The probe flags 95.7\% of all
+claims---essentially everything---and Claude-sonnet-4-6 then fact-checks each flagged claim
+and decides what is actually wrong. The probe contributes no discriminative signal: at 0.592
+AUROC, it barely beats the random baseline (0.509). Claude alone achieves 0.986 AUROC on the
+same claims.
 
-However, this result is qualified. The 91.8\% figure depends on Claude-sonnet-4-6's ability
-to correctly classify flagged claims---a capability that exists independently of the probe.
-A pipeline using Claude self-check alone (without any probe) would likely achieve comparable
-reduction by checking all claims. The probe's marginal contribution is to provide a structured
-interface between the generator and the corrector, not genuine discriminative signal.
+Replacing the probe with \texttt{flag\_all=True} and sending every claim to Claude for
+fact-checking would produce roughly the same result. The pipeline works because Claude is
+good at fact-checking, not because the probe is good at detection. The comparison to
+Goodfire's 58\% RL baseline is therefore not meaningful---our ``pipeline'' is just Claude
+doing all the work with extra steps.
 
-\subsection{The Deception Probe's Vocabulary Confound}
+\subsection{The Deception Probe Is a Vocabulary Classifier}
 
-The BoW baseline matching the deception probe (0.997 vs.\ 0.981) is a critical finding.
-It indicates the probe learned to detect the distinctive vocabulary of AF scratchpad reasoning
-rather than geometric features of deceptive intent. This is directly analogous to the
-vocabulary confound documented in the autointerp SAE probe work, and explains the OOD gap
-(0.663 on gold\_106, which uses different surface forms).
+The BoW baseline does not merely match the deception probe---it exceeds it (0.997 vs.\ 0.981).
+The probe learned scratchpad formatting tokens, not deceptive intent. Any n-gram classifier
+can do what this probe does. This explains the OOD collapse: gold\_106 has different surface
+form, so the probe drops to 0.663 AUROC.
 
-The practical implication: probes trained on scratchpad-formatted data cannot be deployed
-as general-purpose deception detectors without substantial training data diversification.
-The autointerp approach of training across both ``HIGH'' and ``LOW'' activation regimes,
-combined with vocabulary-constrained negative sampling, is the likely path to closing
-this gap.
+This is the same failure mode documented in the autointerp SAE probe work. Probes trained on
+format-distinctive data are vocabulary classifiers in disguise. The fix---training across
+diverse activation regimes with vocabulary-constrained negative sampling---has been demonstrated
+(0.355 $\to$ 0.991 AUROC) but was not applied in this study.
 
 \subsection{Adversarial Robustness: Truthfulness vs.\ Deception}
 
@@ -487,22 +485,28 @@ suggests some universality, but the vocabulary confound makes this hard to inter
 
 \section{Conclusion}
 
-We establish that truthfulness and deception are orthogonal signals in Gemma-2-2B-it
-activation space ($\cos = -0.0012$), replicating a key finding from the lambda\_results
-mechanistic study. A truthfulness probe achieves 0.877 AUROC on TruthfulQA but suffers
-severe domain shift to free-form generation (0.592 AUROC). A deception probe achieves
-0.981 AUROC in-distribution but is vocabulary-confounded (BoW = 0.997) and fails OOD
-(0.663 on gold\_106). Despite these limitations, the combined pipeline achieves 91.8\%
-hallucination reduction on hard factual generation---exceeding the Goodfire RL baseline
-by 33.8 points---by using the probe as a high-recall flag and delegating correction to a
-capable LLM. The probe contributes coverage; the LLM contributes precision.
+Of seven protocol criteria, three meaningfully pass and four fail—two technically pass
+their numbers but fail the intent of the test.
 
-These results suggest two priorities for future work. First, domain-matched training
-data is essential for probes to provide genuine reward signal---the autointerp approach
-of matching activation magnitude regimes across training examples is a promising direction.
-Second, the asymmetry between truthfulness and deception probe robustness (recovery 0.696
-vs.\ $\geq 0.897$) warrants investigation into whether truthfulness, unlike deception,
-is not mechanistically load-bearing in the model's generation process.
+\textbf{What is real:} Truthfulness and deception are orthogonal signals in Gemma-2-2B-it
+activation space ($\cos = -0.0012$), independently replicating the lambda\_results
+mechanistic finding. The truthfulness probe detects a genuine geometric signal (BoW = 0.311
+vs.\ probe = 0.877), and paraphrase robustness holds on average ($\sigma = 0.088$).
+
+\textbf{What fails:} The truthfulness probe does not generalize beyond its training
+distribution (0.877 $\to$ 0.592 on free-form text). The deception probe is a vocabulary
+classifier (BoW = 0.997) that collapses OOD (0.663 on gold\_106). The 91.8\% hallucination
+reduction is Claude doing all the work---the probe flags 95.7\% of everything and contributes
+no discrimination. Fresh probe recovery after adversarial SFT reaches only 0.696, well below
+the 0.90 target.
+
+The probes fail for the same reason as the earlier lightbright SAE sweep (0.355 AUROC):
+training distribution does not match deployment distribution. The fix is known from the
+autointerp study (0.355 $\to$ 0.991): train on diverse data covering both activation
+magnitude regimes. Applying this to the truthfulness probe is the obvious next step.
+The orthogonality finding stands as the most robust result and has implications for
+monitoring system design: detecting one failure mode cannot substitute for detecting
+the other.
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
