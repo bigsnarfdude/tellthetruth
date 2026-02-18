@@ -11,7 +11,7 @@ Independent replication and extension of Goodfire AI's probe-based hallucination
 - Python 3.12+
 - NVIDIA GPU with 16GB+ VRAM (tested on RTX 4070 Ti SUPER)
 - [Claude CLI](https://claude.ai/cli) (for experiments 4 and 5)
-- HuggingFace datasets: `vincentoh/alignment-faking-training`, `vincentoh/af-model-organisms` (for experiments 2, 3)
+- HuggingFace account (to download `truthfulqa/truthful_qa` for experiments 1, 3, 4, 5)
 
 ### Setup
 
@@ -115,12 +115,20 @@ tellthetruth/
 
 ## Data Dependencies
 
-| Dataset | Source | Used In |
-|---------|--------|---------|
-| TruthfulQA | `truthfulqa/truthful_qa` (HuggingFace) | Exp 1, 3, 4, 5 |
-| AF training data | `vincentoh/alignment-faking-training` | Exp 2, 3 |
-| AF model organisms | `vincentoh/af-model-organisms` | Exp 2, 3 |
-| gold_106 | `vincentoh/alignment-faking-training` | Exp 2 (eval only, never train) |
+| Dataset | Source | Used In | Notes |
+|---------|--------|---------|-------|
+| TruthfulQA | [`truthfulqa/truthful_qa`](https://huggingface.co/datasets/truthfulqa/truthful_qa) | Exp 1, 3, 4, 5 | Public, auto-downloads |
+| Gemma-2-2B-it | [`google/gemma-2-2b-it`](https://huggingface.co/google/gemma-2-2b-it) | All | Requires HF agreement |
+
+Experiments 2 and 3 (deception probe, orthogonality) additionally require alignment faking datasets that are **not bundled with this repo**. These come from separate research on alignment faking detection and must be downloaded independently:
+
+| Dataset | Source | Used In | Notes |
+|---------|--------|---------|-------|
+| AF training data | [`vincentoh/alignment-faking-training`](https://huggingface.co/datasets/vincentoh/alignment-faking-training) | Exp 2, 3 | Aligned + potential_faking samples |
+| AF model organisms | [`vincentoh/af-model-organisms`](https://huggingface.co/datasets/vincentoh/af-model-organisms) | Exp 2, 3 | Mistral-7B generated AF organisms |
+| gold_106 | included in `alignment-faking-training` | Exp 2 | **Eval only -- never train on this** |
+
+Experiments 1, 4, and 5 work standalone with just TruthfulQA and Gemma.
 
 ## Model
 
