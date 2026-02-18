@@ -1,8 +1,8 @@
 # Tell The Truth
 
-> **TL;DR:** We tried to validate Goodfire's [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Feb 2026) claim that activation probes can reduce LLM hallucinations. **The probes don't generalize.** The truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier in disguise (BoW = 0.997). The headline "91.8% hallucination reduction" is misleading -- the probe flags 95.7% of all claims and Claude does all the real work deciding what's wrong. You could replace the probe with `flag_everything=True` and get roughly the same result. What *is* real: truthfulness and deception are orthogonal signals in activation space (cos = -0.001), and the truthfulness signal is genuinely geometric within its training distribution.
+> **TL;DR:** We tried to validate Goodfire's [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Feb 2026) claim that activation probes can reduce LLM hallucinations. **The probes don't generalize.** The truthfulness probe scores 0.877 AUROC on TruthfulQA but drops to 0.592 (near random) on free-form generation. The deception probe is a vocabulary classifier in disguise (BoW = 0.997). The headline "91.8% hallucination reduction" is misleading -- the probe flags 95.7% of all claims and Claude does all the real work deciding what's wrong. You could replace the probe with `flag_everything=True` and get roughly the same result. We then tested the autointerp diverse-training fix that worked for deception (0.355->0.991) -- **it doesn't work for truthfulness.** The distributions already overlap (1.02x magnitude, 75% feature overlap). Different root cause. What *is* real: truthfulness and deception are orthogonal signals in activation space (cos = -0.001), and the truthfulness signal is genuinely geometric within its training distribution.
 
-Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it. Five experiments, mostly negative results, some interesting mechanistic findings.
+Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it. Six experiments, mostly negative results, some interesting mechanistic findings.
 
 ## What Worked
 
@@ -16,8 +16,9 @@ Independent replication of Goodfire AI's probe-based hallucination detection on 
 - **Deception probe is a vocabulary classifier.** BoW = 0.997 matches the probe. It learned scratchpad formatting tokens, not deceptive intent. OOD on gold_106: 0.663.
 - **91.8% hallucination reduction is Claude, not the probe.** The probe flags 95.7% of claims (essentially everything). Claude then fact-checks each one. The probe contributes nothing beyond `flag_all=True`. The pipeline works because Claude is good at fact-checking, not because the probe is good at detection.
 - **Adversarial recovery is weak.** Fresh probe recovers to 0.696, well below the 0.90 target. The truthfulness signal is more fragile than the deception signal under adversarial pressure.
+- **Diverse-training fix doesn't transfer from deception to truthfulness.** The autointerp fix (0.355->0.991 for deception) does NOT work here. Diagnosis: distributions already overlap (1.02x magnitude, 75% feature overlap, 0.92 centroid cosine). 120 diverse Claude-generated samples improved free-form AUROC by only 0.036. The truthfulness OOD gap has a different root cause.
 
-## Honest Scorecard (3 of 7 criteria meaningfully pass)
+## Honest Scorecard (4 of 9 criteria meaningfully pass)
 
 | Criterion | Target | Result | Pass | Notes |
 |-----------|--------|--------|------|-------|
@@ -28,6 +29,8 @@ Independent replication of Goodfire AI's probe-based hallucination detection on 
 | Pipeline hallucination reduction | >= 30% | 91.8% | No* | Claude does the work, probe flags everything |
 | Fresh probe recovery after adversarial SFT | >= 0.90 | 0.696 | No | Signal partially erasable |
 | Paraphrase stability std | <= 0.10 | **0.088** | Yes | Real finding |
+| Diverse free-form AUROC (Exp 6) | >= 0.75 | 0.706 | No | Best only with data leak; diverse-only = 0.574 |
+| TruthfulQA no regression (Exp 6) | >= 0.85 | **0.870** | Yes | Diverse training doesn't hurt in-dist |
 
 \* Technically passes the number but fails the intent of the test.
 
@@ -37,7 +40,7 @@ Independent replication of Goodfire AI's probe-based hallucination detection on 
 
 - Python 3.12+
 - NVIDIA GPU with 16GB+ VRAM (tested on RTX 4070 Ti SUPER)
-- [Claude CLI](https://claude.ai/cli) (for experiments 4 and 5)
+- [Claude CLI](https://claude.ai/cli) (for experiments 4, 5, and 6)
 - HuggingFace account (to download `truthfulqa/truthful_qa` for experiments 1, 3, 4, 5)
 
 ### Setup
@@ -50,7 +53,7 @@ pip install -r requirements.txt
 
 ### Run Experiments
 
-Experiments must run **in order** (1-5). Each writes results to `results/`.
+Experiments must run **in order** (1-6). Each writes results to `results/`.
 
 ```bash
 # Exp 1: Truthfulness probe (TruthfulQA, ~1h GPU)
@@ -68,6 +71,11 @@ python experiments/exp4_pipeline.py
 # Exp 5: Adversarial robustness (~1h GPU + Claude CLI)
 #   Reads results/exp4_results.json from Exp 4
 python experiments/exp5_adversarial.py
+
+# Exp 6: Diverse-training fix (~3min GPU + Claude CLI)
+#   Tests if autointerp diverse-training fix works for truthfulness
+#   Reads results/exp4_results_sonnet.json from Exp 4
+python experiments/exp6_diverse_truthfulness.py
 ```
 
 All random seeds are fixed (42). Results should reproduce on equivalent hardware.
@@ -86,14 +94,16 @@ tellthetruth/
 │   ├── exp2_deception_probe.py
 │   ├── exp3_orthogonality.py
 │   ├── exp4_pipeline.py
-│   └── exp5_adversarial.py
+│   ├── exp5_adversarial.py
+│   └── exp6_diverse_truthfulness.py  # NEGATIVE RESULT
 ├── prototypes/                # Earlier exploration pipelines
 │   ├── rlfr_pipeline.py           # Web-search-based verification
 │   ├── rlfr_probe_pipeline.py     # First probe-based pipeline
 │   └── rlfr_organism_pipeline.py  # AF organism-enhanced probe
 ├── results/                   # Output from all experiments
-│   ├── exp{1-5}_results.json      # Raw metrics
-│   ├── exp{1-5}_results.md        # Human-readable reports
+│   ├── exp{1-6}_results.json      # Raw metrics
+│   ├── exp{1-6}_results.md        # Human-readable reports
+│   ├── exp6_diverse_data.json     # 120 Claude-generated diverse samples
 │   └── rlfr_*.md                  # Prototype pipeline results
 └── paper/
     ├── paper_draft.tex        # LaTeX draft
@@ -113,9 +123,18 @@ tellthetruth/
 
 **Exp 5 - Adversarial Robustness:** LoRA adversarial SFT drops probe from 0.876 to 0.494. Fresh probe recovers to only 0.696. Paraphrase stability is OK (std = 0.088).
 
+**Exp 6 - Diverse-Training Fix (NEGATIVE RESULT):** Tested whether the autointerp diverse-training fix (0.355->0.991 for deception) works for truthfulness. It doesn't. Distribution diagnosis shows the distributions already overlap: 1.02x magnitude ratio, 75% feature overlap, 0.92 centroid cosine. This is the opposite of the deception case (10x, 6%, low). 120 Claude-generated diverse samples improved free-form AUROC by only 0.036 (0.538->0.574). The only meaningful jump (to 0.706) came from training on exp4 claims themselves -- which is circular. The truthfulness OOD gap has a fundamentally different root cause than deception.
+
 ## What Would Fix This
 
-The probes fail for the same reason our earlier lightbright SAE sweep failed (0.355 AUROC): **training distribution doesn't match deployment distribution.** The fix is known from autointerp (0.355 -> 0.991): train on diverse data covering both activation magnitude regimes. We haven't done that here for the truthfulness probe yet.
+~~The probes fail for the same reason our earlier lightbright SAE sweep failed (0.355 AUROC): **training distribution doesn't match deployment distribution.**~~
+
+**Update (Exp 6):** We tested the autointerp diverse-training fix. It doesn't work for truthfulness -- the distributions already overlap. The root cause is different. Untested alternatives:
+
+1. **Non-linear probes** -- MLP or polynomial features (linear may be insufficient for free-form truthfulness)
+2. **Format-invariant training** -- mixed QA + assertions + paragraphs from the start (QA formatting helped +0.046)
+3. **Multi-layer aggregation** -- concatenate across layers (L16 alone may not suffice for free-form)
+4. **Model-generated training data** -- exp4 claims helped +0.132 from 94 samples vs +0.036 from 120 Claude-generated samples; something different about model-generated text
 
 ## Data Dependencies
 
@@ -132,7 +151,7 @@ Experiments 2 and 3 (deception probe, orthogonality) additionally require alignm
 | AF model organisms | [`vincentoh/af-model-organisms`](https://huggingface.co/datasets/vincentoh/af-model-organisms) | Exp 2, 3 | Mistral-7B generated AF organisms |
 | gold_106 | included in `alignment-faking-training` | Exp 2 | **Eval only -- never train on this** |
 
-Experiments 1, 4, and 5 work standalone with just TruthfulQA and Gemma.
+Experiments 1, 4, 5, and 6 work standalone with just TruthfulQA and Gemma.
 
 ## Model
 
