@@ -1,8 +1,8 @@
 # Tell The Truth
 
-Probe-based hallucination and deception detection in language model activations. Replicates and extends the core loop from [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Goodfire AI, Feb 2026) using linear probes on Gemma-2-2B-it.
+> **TL;DR:** We train linear probes on Gemma-2-2B-it hidden states to detect hallucinations and deception. The two signals are orthogonal (cos = -0.001). Pairing a high-recall truthfulness probe with Claude-as-corrector eliminates 91.8% of hallucinations -- no RL needed, beating the 58% from the original Features-as-Rewards paper. The probe works great in-distribution (0.877 AUROC) but struggles on free-form generation (0.592) due to domain shift. The deception probe has a vocabulary confound (BoW = 0.997). Five of seven pre-registered success criteria pass.
 
-**Key finding:** Truthfulness and deception are orthogonal signals in activation space. A probe + LLM intervention pipeline achieves 91.8% hallucination reduction without RL training (vs. 58% with RL in the paper).
+Probe-based hallucination and deception detection in language model activations. Replicates and extends the core loop from [Features as Rewards](https://arxiv.org/abs/2502.XXXXX) (Goodfire AI, Feb 2026) using linear probes on Gemma-2-2B-it.
 
 ## Quick Start
 
