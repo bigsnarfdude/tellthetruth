@@ -1,0 +1,151 @@
+Loading model...
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:00<00:00,  2.15it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00,  4.09it/s]
+Loaded google/gemma-2-2b-it on cuda, 26 layers
+============================================================
+  Experiment 6: Diverse-Training Fix for Truthfulness Probe
+============================================================
+
+Loading TruthfulQA...
+  1634 samples (817 correct, 817 incorrect)
+  Split: 1307 dev, 327 test
+
+Loading Exp 4 claims...
+  Loaded 189 verifiable claims from Exp 4
+    Correct: 101, Incorrect: 88
+
+Extracting TruthfulQA dev activations (layer 16, last)...
+    [100/1307]...
+    [200/1307]...
+    [300/1307]...
+    [400/1307]...
+    [500/1307]...
+    [600/1307]...
+    [700/1307]...
+    [800/1307]...
+    [900/1307]...
+    [1000/1307]...
+    [1100/1307]...
+    [1200/1307]...
+    [1300/1307]...
+Extracting TruthfulQA test activations...
+    [100/327]...
+    [200/327]...
+    [300/327]...
+Extracting free-form claim activations...
+    [100/189]...
+
+============================================================
+  Stage 6.1: Distribution Diagnosis
+============================================================
+  TruthfulQA magnitude: 254.2 ± 25.0 [157.9, 340.8]
+  Free-form magnitude:  249.6 ± 24.7 [161.1, 308.3]
+  Magnitude ratio: 1.02x
+  Top-100 feature overlap: 75/100 (75%)
+  Centroid cosine similarity: 0.9165
+  Median per-dimension variance ratio: 1.15x
+
+============================================================
+  Stage 6.2: Diverse Data Generation
+============================================================
+
+  [1/5] Generating: assertions (Single-sentence factual assertions)...
+    Got 30 samples (24 correct, 6 incorrect)
+
+  [2/5] Generating: paragraphs (Claims embedded in short paragraphs)...
+    Got 20 samples (11 correct, 9 incorrect)
+
+  [3/5] Generating: technical (Technical/numerical claims)...
+    Got 30 samples (15 correct, 15 incorrect)
+
+  [4/5] Generating: biographical (Biographical and citation claims)...
+    Got 20 samples (10 correct, 10 incorrect)
+
+  [5/5] Generating: hedged (Claims with hedging/uncertainty language)...
+    Got 20 samples (11 correct, 9 incorrect)
+
+  Cached diverse data to /home/vincent/tellthetruth/results/exp6_diverse_data.json
+
+============================================================
+  Stage 6.3: Progressive Training Sweep
+============================================================
+
+  [Step 0] Baseline: TruthfulQA only
+    TruthfulQA AUROC: 0.8768
+    Free-form AUROC:  0.5383
+
+  [Step 0.5] Baseline: TruthfulQA probe, QA-formatted free-form eval
+    [100/189]...
+    Free-form (QA fmt) AUROC: 0.5842
+
+  [Step 1] +assertions: 30 samples (24 correct, 6 incorrect)
+    Cumulative diverse: 30 samples
+    Combined training: 1337 samples
+    TruthfulQA AUROC: 0.8763 (regression check: OK)
+    Free-form AUROC:  0.5281 (target: >= 0.75)
+
+  [Step 2] +paragraphs: 20 samples (11 correct, 9 incorrect)
+    Cumulative diverse: 50 samples
+    Combined training: 1357 samples
+    TruthfulQA AUROC: 0.8763 (regression check: OK)
+    Free-form AUROC:  0.5424 (target: >= 0.75)
+
+  [Step 3] +technical: 30 samples (15 correct, 15 incorrect)
+    Cumulative diverse: 80 samples
+    Combined training: 1387 samples
+    TruthfulQA AUROC: 0.8757 (regression check: OK)
+    Free-form AUROC:  0.5620 (target: >= 0.75)
+
+  [Step 4] +biographical: 20 samples (10 correct, 10 incorrect)
+    Cumulative diverse: 100 samples
+    Combined training: 1407 samples
+    TruthfulQA AUROC: 0.8753 (regression check: OK)
+    Free-form AUROC:  0.5731 (target: >= 0.75)
+
+  [Step 5] +hedged: 20 samples (11 correct, 9 incorrect)
+    Cumulative diverse: 120 samples
+    [100/120]...
+    Combined training: 1427 samples
+    TruthfulQA AUROC: 0.8757 (regression check: OK)
+    Free-form AUROC:  0.5744 (target: >= 0.75)
+
+  [Step 6] +exp4_claims (50% split)
+    [100/120]...
+    +94 exp4 claims (50 correct, 44 incorrect)
+    Full training set: 1521 samples
+    TruthfulQA AUROC: 0.8702
+    Free-form AUROC (held-out 50%): 0.7059
+
+  Best step: 6 (+exp4_claims) — ff AUROC 0.7059
+    [100/120]...
+
+============================================================
+  Stage 6.4: Pipeline Re-evaluation
+============================================================
+  AUROC: 0.5744 (was 0.592)
+  Accuracy: 0.5450
+  Flagged: 32/189 (16.9%)
+  Precision (hallu detection): 0.5312
+  Recall (hallu detection): 0.1932
+  AUROC CI: 0.5751 [0.4889, 0.6539]
+
+  Intervention potential:
+    Total incorrect: 88
+    Caught by probe: 17
+    Missed: 71
+    Potential reduction (if Claude fixes all flagged): 19.3%
+
+Total time: 187s
+Saved: /home/vincent/tellthetruth/results/exp6_results.json
+Saved: /home/vincent/tellthetruth/results/exp6_results.md
+
+============================================================
+  SUMMARY
+============================================================
+  Baseline free-form AUROC:     0.592
+  Best diverse free-form AUROC: 0.7059
+  Improvement:                  +0.1139
+  TruthfulQA regression:        0.8702 (was 0.877)
+  Pipeline potential reduction:  19.3%
+  Passes free-form target:      NO (target ≥ 0.75)
+============================================================
+Done!

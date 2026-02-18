@@ -1,0 +1,163 @@
+{
+  "model": "google/gemma-2-2b-it",
+  "layer": 16,
+  "pool": "last",
+  "C": 0.01,
+  "diagnosis": {
+    "tqa_magnitude": {
+      "mean": 254.19024658203125,
+      "std": 25.006729125976562,
+      "min": 157.85667419433594,
+      "max": 340.7761535644531
+    },
+    "freeform_magnitude": {
+      "mean": 249.6063232421875,
+      "std": 24.679298400878906,
+      "min": 161.102783203125,
+      "max": 308.32611083984375
+    },
+    "magnitude_ratio": 1.018364612243401,
+    "top_k": 100,
+    "feature_overlap": 75,
+    "feature_overlap_pct": 75.0,
+    "centroid_cosine": 0.9165334105491638,
+    "median_variance_ratio": 1.1541123390197754
+  },
+  "diverse_batches": [
+    {
+      "name": "assertions",
+      "desc": "Single-sentence factual assertions",
+      "n_samples": 30,
+      "n_correct": 24,
+      "n_incorrect": 6
+    },
+    {
+      "name": "paragraphs",
+      "desc": "Claims embedded in short paragraphs",
+      "n_samples": 20,
+      "n_correct": 11,
+      "n_incorrect": 9
+    },
+    {
+      "name": "technical",
+      "desc": "Technical/numerical claims",
+      "n_samples": 30,
+      "n_correct": 15,
+      "n_incorrect": 15
+    },
+    {
+      "name": "biographical",
+      "desc": "Biographical and citation claims",
+      "n_samples": 20,
+      "n_correct": 10,
+      "n_incorrect": 10
+    },
+    {
+      "name": "hedged",
+      "desc": "Claims with hedging/uncertainty language",
+      "n_samples": 20,
+      "n_correct": 11,
+      "n_incorrect": 9
+    }
+  ],
+  "sweep": [
+    {
+      "step": 0,
+      "name": "baseline_tqa_only",
+      "n_train": 1307,
+      "n_added": 0,
+      "tqa_auroc": 0.8768143049528655,
+      "freeform_auroc": 0.5382538253825383
+    },
+    {
+      "step": 0.5,
+      "name": "baseline_qa_format_eval",
+      "n_train": 1307,
+      "n_added": 0,
+      "tqa_auroc": 0.8768143049528655,
+      "freeform_auroc": 0.5841584158415841,
+      "note": "Same probe, but eval claims wrapped in QA format"
+    },
+    {
+      "step": 1,
+      "name": "+assertions",
+      "n_train": 1337,
+      "n_added": 30,
+      "tqa_auroc": 0.8763279964087984,
+      "freeform_auroc": 0.5281278127812782
+    },
+    {
+      "step": 2,
+      "name": "+paragraphs",
+      "n_train": 1357,
+      "n_added": 50,
+      "tqa_auroc": 0.8762531797097113,
+      "freeform_auroc": 0.5424167416741673
+    },
+    {
+      "step": 3,
+      "name": "+technical",
+      "n_train": 1387,
+      "n_added": 80,
+      "tqa_auroc": 0.8756920544665568,
+      "freeform_auroc": 0.5619936993699369
+    },
+    {
+      "step": 4,
+      "name": "+biographical",
+      "n_train": 1407,
+      "n_added": 100,
+      "tqa_auroc": 0.8753179709711207,
+      "freeform_auroc": 0.5731323132313231
+    },
+    {
+      "step": 5,
+      "name": "+hedged",
+      "n_train": 1427,
+      "n_added": 120,
+      "tqa_auroc": 0.875692054466557,
+      "freeform_auroc": 0.5743699369936994
+    },
+    {
+      "step": 6,
+      "name": "+exp4_claims",
+      "n_train": 1521,
+      "n_added": 214,
+      "tqa_auroc": 0.8701930270836451,
+      "freeform_auroc": 0.7058823529411764,
+      "note": "exp4 claims 50/50 train/eval split"
+    }
+  ],
+  "best_step": {
+    "step": 6,
+    "name": "+exp4_claims",
+    "n_train": 1521,
+    "n_added": 214,
+    "tqa_auroc": 0.8701930270836451,
+    "freeform_auroc": 0.7058823529411764,
+    "note": "exp4 claims 50/50 train/eval split"
+  },
+  "pipeline_reeval": {
+    "auroc": 0.5743699369936994,
+    "accuracy": 0.544973544973545,
+    "f1": 0.6666666666666666,
+    "bootstrap_auroc": {
+      "mean": 0.5751317242661549,
+      "ci_lo": 0.4889269750282481,
+      "ci_hi": 0.6538687808157777
+    },
+    "n_flagged": 32,
+    "flag_rate": 16.93121693121693,
+    "precision_hallu": 0.53125,
+    "recall_hallu": 0.19318181818181818,
+    "tp": 17,
+    "fp": 15,
+    "fn": 71,
+    "total_incorrect": 88,
+    "potential_reduction_pct": 19.318181818181817,
+    "original_auroc": 0.592,
+    "improvement": -0.017630063006300545
+  },
+  "elapsed_seconds": 186.80270266532898,
+  "timestamp": "2026-02-18T18:41:23"
+}

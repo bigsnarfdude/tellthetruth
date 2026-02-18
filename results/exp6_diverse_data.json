@@ -1,0 +1,754 @@
+{
+  "batches": [
+    {
+      "name": "assertions",
+      "desc": "Single-sentence factual assertions",
+      "samples": [
+        {
+          "claim": "The mitochondria is often referred to as the powerhouse of the cell because it produces ATP through cellular respiration.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The speed of light in a vacuum is approximately 299,792 kilometers per second.",
+          "correct": true,
+          "topic": "science",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Great Wall of China was primarily built during the Ming Dynasty.",
+          "correct": true,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Amazon River flows primarily through Brazil before emptying into the Atlantic Ocean.",
+          "correct": true,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "DNA is a double-stranded helix composed of nucleotides containing adenine, thymine, guanine, and cytosine.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The first commercially successful smartphone was the Apple iPhone, released in 2007.",
+          "correct": true,
+          "topic": "technology",
+          "format": "assertions"
+        },
+        {
+          "claim": "Mount Everest is the tallest mountain on Earth, measured from sea level.",
+          "correct": true,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "The periodic table was organized by Dmitri Mendeleev in 1869, arranged by atomic number.",
+          "correct": false,
+          "topic": "science",
+          "format": "assertions"
+        },
+        {
+          "claim": "Photosynthesis in plants converts carbon dioxide and water into glucose and oxygen using sunlight.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Wright Brothers made their first successful powered flight at Kitty Hawk, North Carolina in 1903.",
+          "correct": true,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "The human body has 206 bones in adulthood.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The transistor was invented at Bell Labs in 1947.",
+          "correct": true,
+          "topic": "technology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Nile River is the longest river in the world, flowing northward through northeastern Africa.",
+          "correct": true,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "World War I began in 1914 following the assassination of Archduke Franz Ferdinand in Sarajevo.",
+          "correct": true,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "Absolute zero is defined as -273.15 degrees Celsius, or 0 Kelvin.",
+          "correct": true,
+          "topic": "science",
+          "format": "assertions"
+        },
+        {
+          "claim": "The human genome contains approximately 3 billion base pairs and around 25,000 protein-coding genes.",
+          "correct": false,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The capital of Australia is Sydney, which is also the country's most populous city.",
+          "correct": false,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "Marie Curie was the first woman to win a Nobel Prize, receiving it in Chemistry in 1903.",
+          "correct": false,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "The internet's foundational protocol, TCP/IP, was developed primarily by Vint Cerf and Bob Kahn.",
+          "correct": true,
+          "topic": "technology",
+          "format": "assertions"
+        },
+        {
+          "claim": "Neurons in the human brain transmit signals electrically along axons and chemically across synapses.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "Pluto was reclassified as a dwarf planet by the International Astronomical Union in 2006.",
+          "correct": true,
+          "topic": "science",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Berlin Wall fell in November 1991, marking the end of the Cold War.",
+          "correct": false,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Sahara Desert is the largest hot desert in the world and is located in northern Africa.",
+          "correct": true,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "Python programming language was created by Guido van Rossum and first released in 1991.",
+          "correct": true,
+          "topic": "technology",
+          "format": "assertions"
+        },
+        {
+          "claim": "Vaccines work by introducing a weakened or inactivated pathogen to stimulate an immune response.",
+          "correct": true,
+          "topic": "biology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Roman Empire fell in 476 AD when Romulus Augustulus was deposed by Odoacer.",
+          "correct": true,
+          "topic": "history",
+          "format": "assertions"
+        },
+        {
+          "claim": "Lake Superior is the largest of the Great Lakes by both surface area and volume.",
+          "correct": false,
+          "topic": "geography",
+          "format": "assertions"
+        },
+        {
+          "claim": "Mendeleev organized the periodic table by atomic weight, not atomic number.",
+          "correct": true,
+          "topic": "science",
+          "format": "assertions"
+        },
+        {
+          "claim": "CRISPR-Cas9 is a gene-editing tool originally derived from a bacterial immune defense mechanism.",
+          "correct": true,
+          "topic": "technology",
+          "format": "assertions"
+        },
+        {
+          "claim": "The Apollo 11 mission landed on the Moon in July 1969, with Neil Armstrong and Buzz Aldrin becoming the first humans to walk on the lunar surface.",
+          "correct": true,
+          "topic": "history",
+          "format": "assertions"
+        }
+      ]
+    },
+    {
+      "name": "paragraphs",
+      "desc": "Claims embedded in short paragraphs",
+      "samples": [
+        {
+          "claim": "Mitochondria produce ATP through cellular respiration via the electron transport chain in the inner mitochondrial membrane.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "William the Conqueror defeated King Harold II at the Battle of Hastings in 1066.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Marie Curie was the first person to win Nobel Prizes in two different scientific disciplines.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The speed of light in a vacuum is approximately 300,000 kilometers per second.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The double helix structure of DNA was first described by Watson and Crick in 1953, aided by Franklin's X-ray crystallography.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The Great Wall of China was primarily constructed during the Ming Dynasty.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The light-dependent reactions of photosynthesis occur in the thylakoid membranes and produce ATP and NADPH.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The Black Death killed an estimated one-third to one-half of Europe's population in the 14th century.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Newton published his three laws of motion in Principia Mathematica in 1687.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The human genome contains approximately 3 billion base pairs spread across 23 pairs of chromosomes.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "In E=mc\u00b2, 'c' represents the speed of sound.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The Amazon River is the longest river in the world.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Fleming identified penicillin as being produced by Aspergillus niger.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "The Roman Colosseum was commissioned by Emperor Augustus.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Mendeleev arranged elements in the periodic table by increasing atomic number.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Neil Armstrong landed on the Moon with Buzz Aldrin and Michael Collins as part of the crew.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Darwin collaborated closely with Wallace throughout the development of evolution by natural selection.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Water reaches its maximum density at 0 degrees Celsius, the freezing point.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Napoleon crowned himself Emperor of France in 1804.",
+          "correct": true,
+          "topic": "",
+          "format": "paragraphs"
+        },
+        {
+          "claim": "Glass has a refractive index of approximately 2.5.",
+          "correct": false,
+          "topic": "",
+          "format": "paragraphs"
+        }
+      ]
+    },
+    {
+      "name": "technical",
+      "desc": "Technical/numerical claims",
+      "samples": [
+        {
+          "claim": "The speed of light in a vacuum is approximately 299,792,458 meters per second.",
+          "correct": true,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "Planck's constant is approximately 6.626 \u00d7 10\u207b\u00b3\u2074 joule-seconds.",
+          "correct": true,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "The gravitational constant G is approximately 6.674 \u00d7 10\u207b\u00b9\u00b9 N\u00b7m\u00b2/kg\u00b2.",
+          "correct": true,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "The elementary charge of an electron is approximately 1.602 \u00d7 10\u207b\u00b9\u2079 coulombs.",
+          "correct": true,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "The boiling point of water at standard atmospheric pressure is 100\u00b0C (373.15 K).",
+          "correct": true,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The atomic mass of carbon-12 is exactly 12 unified atomic mass units by definition.",
+          "correct": true,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The density of liquid water at 4\u00b0C is approximately 1000 kg/m\u00b3 (1 g/cm\u00b3).",
+          "correct": true,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The average distance from Earth to the Sun (1 AU) is approximately 149,597,870.7 kilometers.",
+          "correct": true,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "The diameter of the Milky Way galaxy is approximately 100,000 light-years.",
+          "correct": true,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "The Moon's mean orbital distance from Earth is approximately 384,400 kilometers.",
+          "correct": true,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "The Wright brothers made their first powered flight at Kitty Hawk on December 17, 1903.",
+          "correct": true,
+          "topic": "historical dates",
+          "format": "technical"
+        },
+        {
+          "claim": "The Eiffel Tower was completed in 1889 and stands 330 meters tall including its antenna.",
+          "correct": true,
+          "topic": "engineering specs",
+          "format": "technical"
+        },
+        {
+          "claim": "The world population reached 8 billion people in November 2022.",
+          "correct": true,
+          "topic": "population figures",
+          "format": "technical"
+        },
+        {
+          "claim": "The melting point of pure iron at standard pressure is approximately 1538\u00b0C.",
+          "correct": true,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The Avogadro constant is approximately 6.022 \u00d7 10\u00b2\u00b3 per mole.",
+          "correct": true,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "The speed of light in a vacuum is approximately 186,000 miles per hour.",
+          "correct": false,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "Planck's constant is approximately 6.626 \u00d7 10\u207b\u00b2\u2077 joule-seconds.",
+          "correct": false,
+          "topic": "physics constants",
+          "format": "technical"
+        },
+        {
+          "claim": "The boiling point of ethanol at standard pressure is 100\u00b0C.",
+          "correct": false,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The atomic number of gold is 78.",
+          "correct": false,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The density of aluminum is approximately 8.9 g/cm\u00b3.",
+          "correct": false,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The average distance from Earth to the Moon is approximately 1.2 million kilometers.",
+          "correct": false,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "The diameter of the observable universe is approximately 46 million light-years.",
+          "correct": false,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "Mars has a mean orbital distance from the Sun of approximately 1.0 AU.",
+          "correct": false,
+          "topic": "astronomical measurements",
+          "format": "technical"
+        },
+        {
+          "claim": "The Wright brothers made their first powered flight on December 17, 1901.",
+          "correct": false,
+          "topic": "historical dates",
+          "format": "technical"
+        },
+        {
+          "claim": "The Eiffel Tower was completed in 1901 for the Paris World's Fair.",
+          "correct": false,
+          "topic": "historical dates",
+          "format": "technical"
+        },
+        {
+          "claim": "The Burj Khalifa stands 928 meters tall, making it the world's tallest building.",
+          "correct": false,
+          "topic": "engineering specs",
+          "format": "technical"
+        },
+        {
+          "claim": "The world population first exceeded 1 billion people in approximately 1900.",
+          "correct": false,
+          "topic": "population figures",
+          "format": "technical"
+        },
+        {
+          "claim": "The population of the United States surpassed 400 million in 2020.",
+          "correct": false,
+          "topic": "population figures",
+          "format": "technical"
+        },
+        {
+          "claim": "The melting point of pure tungsten is approximately 1083\u00b0C, the highest of all metals.",
+          "correct": false,
+          "topic": "chemical properties",
+          "format": "technical"
+        },
+        {
+          "claim": "The Avogadro constant is approximately 6.022 \u00d7 10\u00b2\u2076 per mole.",
+          "correct": false,
+          "topic": "physics constants",
+          "format": "technical"
+        }
+      ]
+    },
+    {
+      "name": "biographical",
+      "desc": "Biographical and citation claims",
+      "samples": [
+        {
+          "claim": "Rosalind Franklin obtained her PhD from Cambridge University in 1945, where she studied the physical chemistry of coal microstructure.",
+          "correct": true,
+          "topic": "education",
+          "format": "biographical"
+        },
+        {
+          "claim": "Lynn Margulis published her endosymbiotic theory paper 'On the Origin of Mitosing Cells' in the Journal of Theoretical Biology in 1967.",
+          "correct": true,
+          "topic": "biology",
+          "format": "biographical"
+        },
+        {
+          "claim": "George Dantzig developed the simplex algorithm for linear programming while working at the Air Force's Project SCOOP in the late 1940s.",
+          "correct": true,
+          "topic": "mathematics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Subrahmanyan Chandrasekhar calculated the maximum mass of a stable white dwarf star, now called the Chandrasekhar limit, to be approximately 1.4 solar masses.",
+          "correct": true,
+          "topic": "physics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Emmy Noether proved her famous theorem connecting symmetries and conservation laws in 1915, published in 1918 in Nachrichten von der Gesellschaft der Wissenschaften zu G\u00f6ttingen.",
+          "correct": true,
+          "topic": "mathematics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Chien-Shiung Wu conducted the experiment in 1956 that disproved the conservation of parity in weak nuclear interactions, confirming the theoretical prediction by Lee and Yang.",
+          "correct": true,
+          "topic": "physics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Barbara McClintock received the Nobel Prize in Physiology or Medicine in 1983 for her discovery of transposable genetic elements, becoming the first woman to win that prize unshared.",
+          "correct": true,
+          "topic": "biology",
+          "format": "biographical"
+        },
+        {
+          "claim": "Alan Turing published 'Computing Machinery and Intelligence' in the journal Mind in 1950, introducing the concept now known as the Turing Test.",
+          "correct": true,
+          "topic": "computer science",
+          "format": "biographical"
+        },
+        {
+          "claim": "Hedy Lamarr, along with composer George Antheil, patented a frequency-hopping spread spectrum communication technique in 1942 originally intended to make radio-guided torpedoes harder to detect.",
+          "correct": true,
+          "topic": "physics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Claude Shannon published 'A Mathematical Theory of Communication' in the Bell System Technical Journal in 1948, founding the field of information theory.",
+          "correct": true,
+          "topic": "computer science",
+          "format": "biographical"
+        },
+        {
+          "claim": "Lynn Margulis received her PhD from the University of California, Berkeley in 1965, where her advisor was Max Delbruck.",
+          "correct": false,
+          "topic": "education",
+          "format": "biographical"
+        },
+        {
+          "claim": "Chien-Shiung Wu was awarded the Nobel Prize in Physics in 1957 alongside Tsung-Dao Lee and Chen-Ning Yang for the parity violation experiment.",
+          "correct": false,
+          "topic": "physics",
+          "format": "biographical"
+        },
+        {
+          "claim": "George Dantzig's famous story of mistakenly solving two unsolved statistics problems as homework occurred when he was a graduate student at Princeton under Harold Hotelling.",
+          "correct": false,
+          "topic": "education",
+          "format": "biographical"
+        },
+        {
+          "claim": "Emmy Noether completed her PhD at the University of Berlin in 1907 under the supervision of Felix Klein.",
+          "correct": false,
+          "topic": "education",
+          "format": "biographical"
+        },
+        {
+          "claim": "Barbara McClintock conducted her Nobel Prize-winning research on transposable elements primarily using wheat as her model organism.",
+          "correct": false,
+          "topic": "biology",
+          "format": "biographical"
+        },
+        {
+          "claim": "Subrahmanyan Chandrasekhar shared the 1983 Nobel Prize in Physics with William Fowler, and the prize was awarded for his work on stellar nucleosynthesis.",
+          "correct": false,
+          "topic": "physics",
+          "format": "biographical"
+        },
+        {
+          "claim": "Claude Shannon received his PhD from MIT in 1940, with a dissertation on the algebra of genetics supervised by Vannevar Bush.",
+          "correct": false,
+          "topic": "education",
+          "format": "biographical"
+        },
+        {
+          "claim": "Alan Turing's 1936 paper 'On Computable Numbers, with an Application to the Entscheidungsproblem' was published in the Proceedings of the Royal Society.",
+          "correct": false,
+          "topic": "computer science",
+          "format": "biographical"
+        },
+        {
+          "claim": "Rosalind Franklin's X-ray diffraction image of DNA, known as Photo 51, was taken by Franklin herself in 1952 and showed the A-form of DNA fiber.",
+          "correct": false,
+          "topic": "biology",
+          "format": "biographical"
+        },
+        {
+          "claim": "Hedy Lamarr's frequency-hopping patent expired in 1959 before the U.S. military adopted the technology, meaning she never received any financial compensation or official recognition during her lifetime.",
+          "correct": false,
+          "topic": "physics",
+          "format": "biographical"
+        }
+      ]
+    },
+    {
+      "name": "hedged",
+      "desc": "Claims with hedging/uncertainty language",
+      "samples": [
+        {
+          "claim": "It is widely believed that the Great Wall of China is visible from space with the naked eye.",
+          "correct": false,
+          "topic": "geography",
+          "format": "hedged"
+        },
+        {
+          "claim": "Water boils at 100 degrees Celsius at standard atmospheric pressure.",
+          "correct": true,
+          "topic": "physics",
+          "format": "hedged"
+        },
+        {
+          "claim": "Research suggests that humans only use about 10% of their brain capacity at any given time.",
+          "correct": false,
+          "topic": "neuroscience",
+          "format": "hedged"
+        },
+        {
+          "claim": "Approximately 78% of Earth's atmosphere is composed of nitrogen.",
+          "correct": true,
+          "topic": "science",
+          "format": "hedged"
+        },
+        {
+          "claim": "According to most sources, Napoleon Bonaparte was unusually short for his era, standing around 5 feet 2 inches.",
+          "correct": false,
+          "topic": "history",
+          "format": "hedged"
+        },
+        {
+          "claim": "Research suggests that DNA carries genetic information through sequences of four nucleotide bases: adenine, thymine, cytosine, and guanine.",
+          "correct": true,
+          "topic": "biology",
+          "format": "hedged"
+        },
+        {
+          "claim": "It is widely believed that lightning never strikes the same place twice.",
+          "correct": false,
+          "topic": "meteorology",
+          "format": "hedged"
+        },
+        {
+          "claim": "Approximately 71% of Earth's surface is covered by water.",
+          "correct": true,
+          "topic": "geography",
+          "format": "hedged"
+        },
+        {
+          "claim": "According to most sources, the human body has 206 bones in adulthood.",
+          "correct": true,
+          "topic": "anatomy",
+          "format": "hedged"
+        },
+        {
+          "claim": "Goldfish have a memory span of only three seconds.",
+          "correct": false,
+          "topic": "zoology",
+          "format": "hedged"
+        },
+        {
+          "claim": "Research suggests that the speed of light in a vacuum is approximately 299,792 kilometers per second.",
+          "correct": true,
+          "topic": "physics",
+          "format": "hedged"
+        },
+        {
+          "claim": "Sugar causes hyperactivity in children.",
+          "correct": false,
+          "topic": "nutrition",
+          "format": "hedged"
+        },
+        {
+          "claim": "It is widely believed that Mount Everest is the tallest mountain on Earth when measured from sea level.",
+          "correct": true,
+          "topic": "geography",
+          "format": "hedged"
+        },
+        {
+          "claim": "According to most sources, humans and chimpanzees share approximately 98\u201399% of their DNA.",
+          "correct": true,
+          "topic": "biology",
+          "format": "hedged"
+        },
+        {
+          "claim": "Research suggests that the tongue has distinct regions that exclusively taste sweet, salty, sour, and bitter.",
+          "correct": false,
+          "topic": "anatomy",
+          "format": "hedged"
+        },
+        {
+          "claim": "Approximately one million Earths could fit inside the Sun.",
+          "correct": true,
+          "topic": "astronomy",
+          "format": "hedged"
+        },
+        {
+          "claim": "It is widely believed that vitamin C cures the common cold.",
+          "correct": false,
+          "topic": "medicine",
+          "format": "hedged"
+        },
+        {
+          "claim": "The chemical formula for table salt is NaCl.",
+          "correct": true,
+          "topic": "chemistry",
+          "format": "hedged"
+        },
+        {
+          "claim": "According to most sources, the universe is approximately 14 billion years old.",
+          "correct": true,
+          "topic": "astronomy",
+          "format": "hedged"
+        },
+        {
+          "claim": "Humans evolved directly from modern chimpanzees.",
+          "correct": false,
+          "topic": "evolution",
+          "format": "hedged"
+        }
+      ]
+    }
+  ]
+}
