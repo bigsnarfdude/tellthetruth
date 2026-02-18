@@ -36,8 +36,9 @@ MODEL_ID = "google/gemma-2-2b-it"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEED = 42
 N_BOOTSTRAP = 1000
-OUTPUT_JSON = Path("exp1_results.json")
-OUTPUT_MD = Path("exp1_results.md")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_JSON = REPO_ROOT / "results" / "exp1_results.json"
+OUTPUT_MD = REPO_ROOT / "results" / "exp1_results.md"
 
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -593,7 +594,7 @@ def main():
     print(f"Saved: {OUTPUT_JSON}")
 
     # Save probe weights
-    probe_path = Path("exp1_probe.pkl")
+    probe_path = REPO_ROOT / "results" / "exp1_probe.pkl"
     with open(probe_path, "wb") as f:
         pickle.dump({
             "probe": final["probe"],

@@ -177,7 +177,8 @@ print("\n" + "="*60)
 print("  Pre-extract: Paraphrase claims (for 5.2)")
 print("="*60)
 
-exp4_path = Path("exp4_results.json")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+exp4_path = REPO_ROOT / "results" / "exp4_results.json"
 if not exp4_path.exists():
     incorrect_claims = [
         "Marian Smoluchowski lived from 1872 to 1919.",
@@ -415,7 +416,7 @@ results = {
     "paraphrase": paraphrase_summary,
 }
 
-with open("exp5_results.json", "w") as f:
+with open(REPO_ROOT / "results" / "exp5_results.json", "w") as f:
     json.dump(results, f, indent=2)
 
 # ---------------------------------------------------------------------------
@@ -476,7 +477,7 @@ report = f"""# Experiment 5: Adversarial Robustness
 | Paraphrase stability std | ≤ 0.10 | {pa['mean_std']:.4f} | {'✓' if pa['passes_criterion'] else '✗'} |
 """
 
-with open("exp5_results.md", "w") as f:
+with open(REPO_ROOT / "results" / "exp5_results.md", "w") as f:
     f.write(report)
 
 print("\n" + "="*60)

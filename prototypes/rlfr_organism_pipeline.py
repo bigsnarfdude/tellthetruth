@@ -37,8 +37,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 # ---------------------------------------------------------------------------
 MODEL_ID = "google/gemma-2-2b-it"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-PROBE_PATH = Path("organism_probe.pkl")
-OUTPUT_FILE = Path("rlfr_organism_results.md")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PROBE_PATH = REPO_ROOT / "results" / "organism_probe.pkl"
+OUTPUT_FILE = REPO_ROOT / "results" / "rlfr_organism_results.md"
 MAX_SAMPLES_PER_CLASS = 500  # balance + speed
 
 # Data paths (from HF cache)

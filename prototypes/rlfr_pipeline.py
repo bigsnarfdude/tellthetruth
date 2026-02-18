@@ -30,7 +30,8 @@ from duckduckgo_search import DDGS
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-OUTPUT_FILE = Path(__file__).parent / "rlfr_results.md"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_FILE = REPO_ROOT / "results" / "rlfr_results.md"
 
 LONGFACT_PROMPT = (
     "Write a detailed, information-dense account of the life and scientific contributions "

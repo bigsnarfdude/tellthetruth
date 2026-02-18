@@ -40,8 +40,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 MODEL_ID = "google/gemma-2-2b-it"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEED = 42
-OUTPUT_JSON = Path("exp4_results.json")
-OUTPUT_MD = Path("exp4_results.md")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_JSON = REPO_ROOT / "results" / "exp4_results.json"
+OUTPUT_MD = REPO_ROOT / "results" / "exp4_results.md"
 
 np.random.seed(SEED)
 torch.manual_seed(SEED)

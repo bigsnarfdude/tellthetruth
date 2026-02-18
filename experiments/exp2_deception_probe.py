@@ -38,8 +38,9 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 SEED = 42
 N_BOOTSTRAP = 1000
 MAX_SAMPLES = 500
-OUTPUT_JSON = Path("exp2_results.json")
-OUTPUT_MD = Path("exp2_results.md")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_JSON = REPO_ROOT / "results" / "exp2_results.json"
+OUTPUT_MD = REPO_ROOT / "results" / "exp2_results.md"
 
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -705,7 +706,7 @@ def main():
     OUTPUT_JSON.write_text(json.dumps(json_results, indent=2))
 
     # Save probe
-    with open("exp2_probe.pkl", "wb") as f:
+    with open(REPO_ROOT / "results" / "exp2_probe.pkl", "wb") as f:
         pickle.dump({"probe": final["probe"], "scaler": final["scaler"], "layer": final["layer"]}, f)
 
     # Report

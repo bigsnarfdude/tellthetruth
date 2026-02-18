@@ -34,8 +34,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 # ---------------------------------------------------------------------------
 MODEL_ID = "google/gemma-2-2b-it"
 PROBE_LAYER = 20  # middle-ish layer of 26-layer model; we'll sweep
-PROBE_PATH = Path("truthfulness_probe.pkl")
-OUTPUT_FILE = Path("rlfr_probe_results.md")
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PROBE_PATH = REPO_ROOT / "results" / "truthfulness_probe.pkl"
+OUTPUT_FILE = REPO_ROOT / "results" / "rlfr_probe_results.md"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Hard prompt for generation phase
