@@ -1,0 +1,73 @@
+{
+  "model": "google/gemma-2-2b-it",
+  "n_prompts": 50,
+  "n_completions": 100,
+  "n_entities": 1963,
+  "data_stats": {
+    "n_completions": 100,
+    "n_entities": 1963,
+    "n_supported": 747,
+    "n_not_supported": 651,
+    "n_insufficient": 565
+  },
+  "localization": {
+    "auroc": 0.9763135512965375,
+    "n_tokens": 10029,
+    "n_entity_tokens": 1659
+  },
+  "classification": {
+    "auroc": 0.7619763233760658,
+    "auroc_ci": [
+      0.7020330462993574,
+      0.8245393545491068
+    ],
+    "threshold_0.7": {
+      "precision": 0.746031746031746,
+      "recall": 0.6861313868613139,
+      "f1": 0.714828897338403
+    },
+    "optimal": {
+      "threshold": 0.5000000000000001,
+      "f1": 0.7333333333333333
+    },
+    "n_test": 256,
+    "n_hallucinated": 137,
+    "n_supported": 119
+  },
+  "ablation": {
+    "linear_same_data": {
+      "auroc": 0.7792430840949519,
+      "precision": 0.7407407407407407,
+      "recall": 0.7299270072992701,
+      "f1": 0.7352941176470589,
+      "n_train": 1121,
+      "n_test": 256
+    }
+  },
+  "config": {
+    "loc_layer": 11,
+    "cls_layers": [
+      11,
+      16
+    ],
+    "loc_embed": 128,
+    "loc_heads": 8,
+    "loc_depth": 4,
+    "cls_embed": 1024,
+    "cls_heads": 8,
+    "loc_lr": 0.001,
+    "cls_lr": 0.05,
+    "threshold": 0.7
+  },
+  "paper_comparison": {
+    "paper_cls_auroc": 0.94,
+    "paper_loc_auroc": 0.88,
+    "paper_precision_0.7": 0.85,
+    "paper_recall_0.7": 0.56,
+    "exp1_in_dist": 0.877,
+    "exp4_ood": 0.592,
+    "exp6_diverse": 0.574
+  },
+  "elapsed_seconds": 8106.855024337769,
+  "timestamp": "2026-02-19T00:30:51"
+}

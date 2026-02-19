@@ -108,6 +108,9 @@ GEN_MAX_TOKENS = 512  # paper: 4096, reduced for 2B model
 N_COMPLETIONS = 2     # paper: 4 per prompt
 
 CLAUDE_MODEL = "claude-sonnet-4-6"
+# Full path needed when launched via nohup (PATH doesn't include ~/.local/bin)
+import shutil
+CLAUDE_BIN = shutil.which("claude") or "/home/vincent/.local/bin/claude"
 
 np.random.seed(SEED)
 torch.manual_seed(SEED)
@@ -193,7 +196,7 @@ PROMPTS = [
 # ---------------------------------------------------------------------------
 def claude(prompt, input_text="", timeout=120):
     """Call Claude CLI."""
-    cmd = ["claude", "-p", prompt, "--model", CLAUDE_MODEL]
+    cmd = [CLAUDE_BIN, "-p", prompt, "--model", CLAUDE_MODEL]
     try:
         result = subprocess.run(
             cmd, input=input_text or None, capture_output=True, text=True, timeout=timeout,
