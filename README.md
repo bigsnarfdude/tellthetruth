@@ -4,8 +4,6 @@
 
 Independent replication of Goodfire AI's probe-based hallucination detection on Gemma-2-2B-it. Eight experiments isolating architecture, data, and scale effects.
 
-
-
 ## What Worked
 
 - **Training data is the fix, not architecture.** Exp 8 ablation: switching from TruthfulQA to model-generated data = +0.187 AUROC. Switching from linear to attention probes = -0.017. Data effect is 11x the architecture effect.
